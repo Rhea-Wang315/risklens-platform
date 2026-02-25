@@ -1,0 +1,50 @@
+"""Example alert for testing."""
+
+{
+  "alert_id": "alert_example_001",
+  "address": "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb",
+  "chain": "ethereum",
+  "pool": "0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640",
+  "pair": "WETH/USDC",
+  "time_window_sec": 300,
+  "pattern_type": "WASH_TRADING",
+  "score": 0.87,
+  "features": {
+    "counterparty_diversity": 2,
+    "roundtrip_count": 15,
+    "total_volume_usd": 125000,
+    "avg_time_between_trades_sec": 18,
+    "price_impact_avg": 0.0023,
+    "self_trade_ratio": 0.93
+  },
+  "evidence_samples": [
+    {
+      "tx_hash": "0xabc123def456...",
+      "timestamp": "2026-02-25T10:30:15Z",
+      "action": "swap",
+      "amount_in": "5.2 WETH",
+      "amount_out": "12500 USDC",
+      "amount_usd": 12500,
+      "counterparty": "0xdef456..."
+    },
+    {
+      "tx_hash": "0xdef456abc789...",
+      "timestamp": "2026-02-25T10:30:33Z",
+      "action": "swap",
+      "amount_in": "12500 USDC",
+      "amount_out": "5.19 WETH",
+      "amount_usd": 12500,
+      "counterparty": "0x742d35..."
+    },
+    {
+      "tx_hash": "0x789abc012def...",
+      "timestamp": "2026-02-25T10:31:02Z",
+      "action": "swap",
+      "amount_in": "8.1 WETH",
+      "amount_out": "19500 USDC",
+      "amount_usd": 19500,
+      "counterparty": "0xabc789..."
+    }
+  ],
+  "detected_at": "2026-02-25T10:35:00Z"
+}
