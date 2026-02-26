@@ -2,7 +2,7 @@
 
 from datetime import datetime
 from enum import Enum
-from typing import Any
+from typing import Any, Dict, List, Optional
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field
@@ -43,15 +43,15 @@ class Alert(BaseModel):
     alert_id: str = Field(default_factory=lambda: str(uuid4()))
     address: str = Field(..., description="Ethereum address under investigation")
     chain: str = Field(default="ethereum", description="Blockchain network")
-    pool: str | None = Field(None, description="DEX pool address")
-    pair: str | None = Field(None, description="Trading pair (e.g., WETH/USDC)")
+    pool: Optional[str] = Field(None, description="DEX pool address")
+    pair: Optional[str] = Field(None, description="Trading pair (e.g., WETH/USDC)")
     time_window_sec: int = Field(..., description="Detection time window in seconds")
     pattern_type: PatternType = Field(..., description="Type of suspicious pattern")
     score: float = Field(..., ge=0.0, le=1.0, description="Detection confidence score")
-    features: dict[str, Any] = Field(
+    features: Dict[str, Any] = Field(
         default_factory=dict, description="Statistical features from detection"
     )
-    evidence_samples: list[dict[str, Any]] = Field(
+    evidence_samples: List[Dict[str, Any]] = Field(
         default_factory=list, description="Sample transactions as evidence"
     )
     detected_at: datetime = Field(default_factory=datetime.utcnow)
@@ -95,13 +95,13 @@ class Decision(BaseModel):
     confidence: float = Field(..., ge=0.0, le=1.0, description="Decision confidence")
     risk_score: float = Field(..., ge=0.0, le=100.0, description="Unified risk score (0-100)")
     rationale: str = Field(..., description="Human-readable explanation")
-    evidence_refs: list[str] = Field(
+    evidence_refs: List[str] = Field(
         default_factory=list, description="References to evidence fields"
     )
-    recommendations: list[str] = Field(
+    recommendations: List[str] = Field(
         default_factory=list, description="Actionable next steps"
     )
-    limitations: list[str] = Field(
+    limitations: List[str] = Field(
         default_factory=list, description="Known limitations of this assessment"
     )
     rule_version: str = Field(..., description="Version of rules used")
@@ -139,8 +139,8 @@ class RuleDefinition(BaseModel):
     rule_id: str = Field(default_factory=lambda: str(uuid4()))
     name: str = Field(..., description="Human-readable rule name")
     description: str = Field(..., description="What this rule detects")
-    pattern_types: list[PatternType] = Field(..., description="Applicable pattern types")
-    conditions: dict[str, Any] = Field(..., description="Rule conditions (DSL)")
+    pattern_types: List[PatternType] = Field(..., description="Applicable pattern types")
+    conditions: Dict[str, Any] = Field(..., description="Rule conditions (DSL)")
     action: ActionType = Field(..., description="Action if rule matches")
     priority: int = Field(default=0, description="Rule priority (higher = evaluated first)")
     enabled: bool = Field(default=True, description="Whether rule is active")
