@@ -7,7 +7,7 @@ name = "risklens"
 version = "0.1.0"
 description = "Production-grade risk control platform for Web3"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.9"
 license = {text = "MIT"}
 authors = [
   {name = "Rhea Wang", email = "qinw.official@gmail.com"}
@@ -50,7 +50,7 @@ include = ["risklens*"]
 
 [tool.ruff]
 line-length = 100
-target-version = "py311"
+target-version = "py39"
 select = [
   "E",   # pycodestyle errors
   "F",   # pyflakes
@@ -68,7 +68,7 @@ pythonpath = ["src"]
 asyncio_mode = "auto"
 
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.9"
 strict = true
 warn_return_any = true
 warn_unused_configs = true
@@ -76,4 +76,4 @@ disallow_untyped_defs = true
 
 [tool.black]
 line-length = 100
-target-version = ['py311']
+target-version = ['py39']
