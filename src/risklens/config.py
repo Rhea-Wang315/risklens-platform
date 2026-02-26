@@ -1,3 +1,5 @@
+from typing import Optional
+
 """Configuration management for RiskLens Platform."""
 
 from functools import lru_cache
@@ -35,8 +37,8 @@ class Settings(BaseSettings):
     whale_sentry_data_dir: str = "../whale-sentry/data"
 
     # Alert Manager
-    slack_webhook_url: str | None = None
-    pagerduty_api_key: str | None = None
+    slack_webhook_url: Optional[str] = None
+    pagerduty_api_key: Optional[str] = None
     alert_rate_limit_per_hour: int = 100
 
     # Rule Engine
