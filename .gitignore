@@ -65,6 +65,7 @@ outputs/
 ROADMAP.md
 PHASE1_QUICKSTART.md
 *_INTERNAL.md
+research.md
 data/
 outputs/
 *.parquet
