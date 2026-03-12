@@ -107,28 +107,33 @@ RiskLens Platform is a complete risk management system for Web3 organizations, b
 ### Prerequisites
 - Python 3.11+
 - Docker + Docker Compose
-- PostgreSQL (or use Docker)
+- PostgreSQL (via Docker recommended)
 
 ### Installation
 
 ```bash
-# Clone the repo
+# 1. Clone the repository
 git clone https://github.com/Rhea-Wang315/risklens-platform.git
 cd risklens-platform
 
-# Install dependencies
+# 2. Start infrastructure (PostgreSQL + Redis)
+docker-compose up -d
+
+# 3. Install Python dependencies
 pip install -e ".[dev]"
 
-# Set up environment
+# 4. Set up environment
 cp .env.example .env
-# Edit .env with your configuration
+# Note: Default DATABASE_URL uses port 5432 (matches docker-compose.yml)
 
-# Initialize database
-python -m risklens.cli db init
+# 5. Initialize database
+risklens db init
 
-# Run the API server
-python -m risklens.cli serve
+# 6. Start the API server
+risklens serve
 ```
+
+The API will be available at `http://localhost:8000`. Check health: `curl http://localhost:8000/health`
 
 ### Run Example
 
