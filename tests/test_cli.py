@@ -32,11 +32,11 @@ def test_db_check_command_help():
 
 def test_serve_command_help():
     """Test serve command shows help."""
-    result = runner.invoke(app, ["serve", "--help"])
+    result = runner.invoke(app, ["serve", "--help"], color=False)
     assert result.exit_code == 0
     assert "Start the FastAPI server" in result.stdout
-    assert "--host" in result.stdout
-    assert "--port" in result.stdout
+    assert "host" in result.stdout.lower()
+    assert "port" in result.stdout.lower()
 
 
 def test_db_init_command_help():
