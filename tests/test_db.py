@@ -14,7 +14,7 @@ def db_session() -> Session:
     """Create a fresh database session for each test."""
     # Setup: create tables
     init_db()
-    
+
     session = SessionLocal()
     try:
         yield session
@@ -45,10 +45,10 @@ def test_create_decision_record(db_session: Session) -> None:
             "pattern_type": "WASH_TRADING",
         },
     )
-    
+
     db_session.add(decision)
     db_session.commit()
-    
+
     # Verify
     retrieved = db_session.query(DecisionRecord).filter_by(decision_id="test_dec_001").first()
     assert retrieved is not None
@@ -78,16 +78,16 @@ def test_query_by_address(db_session: Session) -> None:
             alert_data={},
         )
         db_session.add(decision)
-    
+
     db_session.commit()
-    
+
     # Query
     decisions = (
         db_session.query(DecisionRecord)
         .filter_by(address="0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb")
         .all()
     )
-    
+
     assert len(decisions) == 3
 
 
@@ -112,9 +112,9 @@ def test_query_by_risk_level(db_session: Session) -> None:
             alert_data={},
         )
         db_session.add(decision)
-    
+
     db_session.commit()
-    
+
     # Query HIGH risk
     high_risk = db_session.query(DecisionRecord).filter_by(risk_level="HIGH").all()
     assert len(high_risk) == 1
@@ -141,9 +141,9 @@ def test_query_by_action(db_session: Session) -> None:
             alert_data={},
         )
         db_session.add(decision)
-    
+
     db_session.commit()
-    
+
     # Query FREEZE actions
     freeze_actions = db_session.query(DecisionRecord).filter_by(action="FREEZE").all()
     assert len(freeze_actions) == 1
@@ -153,8 +153,8 @@ def test_query_by_action(db_session: Session) -> None:
 def test_query_by_time_range(db_session: Session) -> None:
     """Test querying decisions by time range."""
     # Create decisions with different timestamps
-    base_time = datetime(2026, 2, 26, 12, 0, 0)
-    
+    datetime(2026, 2, 26, 12, 0, 0)
+
     for i in range(5):
         decision = DecisionRecord(
             decision_id=f"test_dec_{i}",
@@ -173,17 +173,13 @@ def test_query_by_time_range(db_session: Session) -> None:
             alert_data={},
         )
         db_session.add(decision)
-    
+
     db_session.commit()
-    
+
     # Query decisions after 12:02
     cutoff = datetime(2026, 2, 26, 12, 2, 0)
-    recent = (
-        db_session.query(DecisionRecord)
-        .filter(DecisionRecord.decided_at >= cutoff)
-        .all()
-    )
-    
+    recent = db_session.query(DecisionRecord).filter(DecisionRecord.decided_at >= cutoff).all()
+
     assert len(recent) == 3  # 12:02, 12:03, 12:04
 
 
@@ -204,16 +200,16 @@ def test_update_decision(db_session: Session) -> None:
         rule_version="v1.0.0",
         alert_data={},
     )
-    
+
     db_session.add(decision)
     db_session.commit()
-    
+
     # Update
     decision.risk_level = "HIGH"
     decision.action = "FREEZE"
     decision.rationale = "Updated after review"
     db_session.commit()
-    
+
     # Verify
     updated = db_session.query(DecisionRecord).filter_by(decision_id="test_dec_update").first()
     assert updated.risk_level == "HIGH"
@@ -238,14 +234,14 @@ def test_delete_decision(db_session: Session) -> None:
         rule_version="v1.0.0",
         alert_data={},
     )
-    
+
     db_session.add(decision)
     db_session.commit()
-    
+
     # Delete
     db_session.delete(decision)
     db_session.commit()
-    
+
     # Verify
     deleted = db_session.query(DecisionRecord).filter_by(decision_id="test_dec_delete").first()
     assert deleted is None
@@ -272,10 +268,10 @@ def test_json_fields(db_session: Session) -> None:
             "nested": {"deep": {"value": 42}},
         },
     )
-    
+
     db_session.add(decision)
     db_session.commit()
-    
+
     # Verify JSON fields
     retrieved = db_session.query(DecisionRecord).filter_by(decision_id="test_dec_json").first()
     assert retrieved.evidence_refs == ["field1", "field2", "field3"]
@@ -306,9 +302,9 @@ def test_composite_index_query(db_session: Session) -> None:
             alert_data={},
         )
         db_session.add(decision)
-    
+
     db_session.commit()
-    
+
     # Query using composite index (address + decided_at)
     cutoff = datetime(2026, 2, 26, 12, 1, 0)
     results = (
@@ -319,5 +315,5 @@ def test_composite_index_query(db_session: Session) -> None:
         )
         .all()
     )
-    
+
     assert len(results) == 2  # 12:01, 12:02

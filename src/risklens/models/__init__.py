@@ -2,8 +2,8 @@
 
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional
-from uuid import UUID, uuid4
+from typing import Any, Optional
+from uuid import uuid4
 
 from pydantic import BaseModel, Field
 
@@ -48,10 +48,10 @@ class Alert(BaseModel):
     time_window_sec: int = Field(..., description="Detection time window in seconds")
     pattern_type: PatternType = Field(..., description="Type of suspicious pattern")
     score: float = Field(..., ge=0.0, le=1.0, description="Detection confidence score")
-    features: Dict[str, Any] = Field(
+    features: dict[str, Any] = Field(
         default_factory=dict, description="Statistical features from detection"
     )
-    evidence_samples: List[Dict[str, Any]] = Field(
+    evidence_samples: list[dict[str, Any]] = Field(
         default_factory=list, description="Sample transactions as evidence"
     )
     detected_at: datetime = Field(default_factory=datetime.utcnow)
@@ -95,13 +95,11 @@ class Decision(BaseModel):
     confidence: float = Field(..., ge=0.0, le=1.0, description="Decision confidence")
     risk_score: float = Field(..., ge=0.0, le=100.0, description="Unified risk score (0-100)")
     rationale: str = Field(..., description="Human-readable explanation")
-    evidence_refs: List[str] = Field(
+    evidence_refs: list[str] = Field(
         default_factory=list, description="References to evidence fields"
     )
-    recommendations: List[str] = Field(
-        default_factory=list, description="Actionable next steps"
-    )
-    limitations: List[str] = Field(
+    recommendations: list[str] = Field(default_factory=list, description="Actionable next steps")
+    limitations: list[str] = Field(
         default_factory=list, description="Known limitations of this assessment"
     )
     rule_version: str = Field(..., description="Version of rules used")
@@ -127,7 +125,10 @@ class Decision(BaseModel):
                     "Freeze account pending manual review",
                     "Investigate counterparty addresses",
                 ],
-                "limitations": ["Limited to 5-minute time window", "Does not check cross-chain activity"],
+                "limitations": [
+                    "Limited to 5-minute time window",
+                    "Does not check cross-chain activity",
+                ],
                 "rule_version": "v1.0.0",
             }
         }
@@ -139,8 +140,8 @@ class RuleDefinition(BaseModel):
     rule_id: str = Field(default_factory=lambda: str(uuid4()))
     name: str = Field(..., description="Human-readable rule name")
     description: str = Field(..., description="What this rule detects")
-    pattern_types: List[PatternType] = Field(..., description="Applicable pattern types")
-    conditions: Dict[str, Any] = Field(..., description="Rule conditions (DSL)")
+    pattern_types: list[PatternType] = Field(..., description="Applicable pattern types")
+    conditions: dict[str, Any] = Field(..., description="Rule conditions (DSL)")
     action: ActionType = Field(..., description="Action if rule matches")
     priority: int = Field(default=0, description="Rule priority (higher = evaluated first)")
     enabled: bool = Field(default=True, description="Whether rule is active")
