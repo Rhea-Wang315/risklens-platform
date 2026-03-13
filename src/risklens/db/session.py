@@ -25,13 +25,13 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 def get_db() -> Generator[Session, Any, None]:
     """Get database session.
-    
+
     Usage:
         from risklens.db.session import get_db
-        
+
         with next(get_db()) as db:
             db.query(DecisionRecord).all()
-    
+
     Or with FastAPI dependency injection:
         @app.get("/decisions")
         def get_decisions(db: Session = Depends(get_db)):
@@ -46,7 +46,7 @@ def get_db() -> Generator[Session, Any, None]:
 
 def init_db() -> None:
     """Initialize database (create all tables).
-    
+
     Note: In production, use Alembic migrations instead.
     This is only for testing and development.
     """
@@ -57,7 +57,7 @@ def init_db() -> None:
 
 def drop_db() -> None:
     """Drop all tables.
-    
+
     WARNING: This will delete all data!
     Only use in testing.
     """

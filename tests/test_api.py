@@ -7,7 +7,6 @@ from sqlalchemy.orm import Session
 from risklens.api.main import app
 from risklens.db.models import DecisionRecord
 from risklens.db.session import SessionLocal, drop_db, get_db, init_db
-from risklens.models import ActionType, PatternType, RiskLevel
 
 
 @pytest.fixture(scope="function")
@@ -15,7 +14,7 @@ def db_session() -> Session:
     """Create a fresh database session for each test."""
     # Setup: create tables
     init_db()
-    
+
     session = SessionLocal()
     try:
         yield session
@@ -28,12 +27,13 @@ def db_session() -> Session:
 @pytest.fixture(scope="function")
 def test_client(db_session: Session):
     """Create test client with database dependency override."""
+
     def override_get_db():
         try:
             yield db_session
         finally:
             pass
-    
+
     app.dependency_overrides[get_db] = override_get_db
     client = TestClient(app)
     yield client
@@ -43,7 +43,7 @@ def test_client(db_session: Session):
 def test_health_check(test_client: TestClient) -> None:
     """Test health check endpoint."""
     response = test_client.get("/health")
-    
+
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "ok"
@@ -72,12 +72,12 @@ def test_evaluate_alert_success(test_client: TestClient, db_session: Session) ->
             {"tx_hash": "0xdef", "amount_usd": 50000},
         ],
     }
-    
+
     response = test_client.post("/api/v1/evaluate", json=alert_data)
-    
+
     assert response.status_code == 201
     data = response.json()
-    
+
     # Verify response structure
     assert "decision_id" in data
     assert data["address"] == "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb"
@@ -89,12 +89,12 @@ def test_evaluate_alert_success(test_client: TestClient, db_session: Session) ->
     assert len(data["evidence_refs"]) > 0
     assert len(data["recommendations"]) > 0
     assert data["rule_version"] == "v1.0.0"
-    
+
     # Verify database record was created
     decision_id = data["decision_id"]
-    record = db_session.query(DecisionRecord).filter(
-        DecisionRecord.decision_id == decision_id
-    ).first()
+    record = (
+        db_session.query(DecisionRecord).filter(DecisionRecord.decision_id == decision_id).first()
+    )
     assert record is not None
     assert record.address == "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb"
 
@@ -113,9 +113,9 @@ def test_evaluate_alert_high_risk(test_client: TestClient, db_session: Session) 
             "self_trade_ratio": 0.98,
         },
     }
-    
+
     response = test_client.post("/api/v1/evaluate", json=alert_data)
-    
+
     assert response.status_code == 201
     data = response.json()
     assert data["action"] == "FREEZE"
@@ -134,9 +134,9 @@ def test_evaluate_alert_low_risk(test_client: TestClient, db_session: Session) -
             "total_volume_usd": 5000,
         },
     }
-    
+
     response = test_client.post("/api/v1/evaluate", json=alert_data)
-    
+
     assert response.status_code == 201
     data = response.json()
     assert data["action"] == "OBSERVE"
@@ -152,14 +152,14 @@ def test_get_decision_success(test_client: TestClient, db_session: Session) -> N
         "pattern_type": "WASH_TRADING",
         "score": 0.8,
     }
-    
+
     create_response = test_client.post("/api/v1/evaluate", json=alert_data)
     assert create_response.status_code == 201
     decision_id = create_response.json()["decision_id"]
-    
+
     # Retrieve the decision
     get_response = test_client.get(f"/api/v1/decisions/{decision_id}")
-    
+
     assert get_response.status_code == 200
     data = get_response.json()
     assert data["decision_id"] == decision_id
@@ -169,7 +169,7 @@ def test_get_decision_success(test_client: TestClient, db_session: Session) -> N
 def test_get_decision_not_found(test_client: TestClient) -> None:
     """Test 404 when decision doesn't exist."""
     response = test_client.get("/api/v1/decisions/nonexistent")
-    
+
     assert response.status_code == 404
     assert "not found" in response.json()["detail"].lower()
 
@@ -186,10 +186,10 @@ def test_list_decisions_all(test_client: TestClient, db_session: Session) -> Non
         }
         response = test_client.post("/api/v1/evaluate", json=alert_data)
         assert response.status_code == 201
-    
+
     # List all decisions
     response = test_client.get("/api/v1/decisions")
-    
+
     assert response.status_code == 200
     data = response.json()
     assert len(data) == 5
@@ -208,10 +208,10 @@ def test_list_decisions_filter_by_address(test_client: TestClient, db_session: S
         }
         response = test_client.post("/api/v1/evaluate", json=alert_data)
         assert response.status_code == 201
-    
+
     # Filter by address
     response = test_client.get("/api/v1/decisions?address=0xaaa")
-    
+
     assert response.status_code == 200
     data = response.json()
     assert len(data) == 3
@@ -236,10 +236,10 @@ def test_list_decisions_filter_by_risk_level(test_client: TestClient, db_session
         }
         response = test_client.post("/api/v1/evaluate", json=alert_data)
         assert response.status_code == 201
-    
+
     # Filter by HIGH risk level
     response = test_client.get("/api/v1/decisions?risk_level=HIGH")
-    
+
     assert response.status_code == 200
     data = response.json()
     for decision in data:
@@ -263,10 +263,10 @@ def test_list_decisions_filter_by_action(test_client: TestClient, db_session: Se
         }
         response = test_client.post("/api/v1/evaluate", json=alert_data)
         assert response.status_code == 201
-    
+
     # Filter by FREEZE action
     response = test_client.get("/api/v1/decisions?action=FREEZE")
-    
+
     assert response.status_code == 200
     data = response.json()
     for decision in data:
@@ -285,19 +285,19 @@ def test_list_decisions_pagination(test_client: TestClient, db_session: Session)
         }
         response = test_client.post("/api/v1/evaluate", json=alert_data)
         assert response.status_code == 201
-    
+
     # Get first 5
     response1 = test_client.get("/api/v1/decisions?limit=5&offset=0")
     assert response1.status_code == 200
     data1 = response1.json()
     assert len(data1) == 5
-    
+
     # Get next 5
     response2 = test_client.get("/api/v1/decisions?limit=5&offset=5")
     assert response2.status_code == 200
     data2 = response2.json()
     assert len(data2) == 5
-    
+
     # Verify no overlap
     ids1 = {d["decision_id"] for d in data1}
     ids2 = {d["decision_id"] for d in data2}
@@ -312,7 +312,7 @@ def test_evaluate_alert_invalid_pattern_type(test_client: TestClient) -> None:
         "pattern_type": "INVALID_PATTERN",
         "score": 0.8,
     }
-    
+
     response = test_client.post("/api/v1/evaluate", json=alert_data)
     assert response.status_code == 422  # Validation error
 
@@ -323,7 +323,7 @@ def test_evaluate_alert_missing_required_fields(test_client: TestClient) -> None
         "address": "0xtest",
         # Missing pattern_type, score, time_window_sec
     }
-    
+
     response = test_client.post("/api/v1/evaluate", json=alert_data)
     assert response.status_code == 422  # Validation error
 
@@ -336,6 +336,6 @@ def test_evaluate_alert_invalid_score(test_client: TestClient) -> None:
         "pattern_type": "WASH_TRADING",
         "score": 1.5,  # Invalid: must be 0-1
     }
-    
+
     response = test_client.post("/api/v1/evaluate", json=alert_data)
     assert response.status_code == 422  # Validation error

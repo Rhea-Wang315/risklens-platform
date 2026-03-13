@@ -51,6 +51,8 @@ include = ["risklens*"]
 [tool.ruff]
 line-length = 100
 target-version = "py39"
+
+[tool.ruff.lint]
 select = [
   "E",   # pycodestyle errors
   "F",   # pyflakes
@@ -59,6 +61,12 @@ select = [
   "UP",  # pyupgrade
   "C4",  # flake8-comprehensions
   "SIM", # flake8-simplify
+]
+ignore = [
+  "B008",  # FastAPI Depends in function defaults is intentional
+  "B904",  # Exception chaining not always needed
+  "E402",  # Module imports after code (pydantic-settings pattern)
+  "E501",  # Line too long (handled by formatter)
 ]
 
 [tool.pytest.ini_options]

@@ -1,14 +1,13 @@
 """Command-line interface for RiskLens Platform."""
 
-import sys
 from pathlib import Path
 
 import typer
 import uvicorn
-from alembic import command
 from alembic.config import Config
 from sqlalchemy import text
 
+from alembic import command
 from risklens.config import get_settings
 from risklens.db.session import engine
 

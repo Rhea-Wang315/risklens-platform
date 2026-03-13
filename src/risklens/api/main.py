@@ -13,7 +13,7 @@ Design Philosophy:
 - OpenAPI documentation auto-generated
 """
 
-from typing import List, Optional
+from typing import Optional
 
 from fastapi import Depends, FastAPI, HTTPException, Query
 from fastapi.responses import JSONResponse
@@ -40,7 +40,7 @@ decision_engine = DecisionEngine()
 @app.get("/health")
 async def health_check() -> dict:
     """Health check endpoint.
-    
+
     Returns:
         Status message indicating service health
     """
@@ -53,26 +53,26 @@ async def evaluate_alert(
     db: Session = Depends(get_db),
 ) -> Decision:
     """Evaluate an alert and return a decision.
-    
+
     This is the main entry point for risk evaluation. It:
     1. Runs the alert through the decision engine
     2. Stores the decision in the database for audit
     3. Returns the decision with action, rationale, and recommendations
-    
+
     Args:
         alert: Alert from detection engine (e.g., whale-sentry)
         db: Database session (injected)
-        
+
     Returns:
         Decision with action, risk assessment, and rationale
-        
+
     Raises:
         HTTPException: 400 if alert is invalid, 500 if internal error
     """
     try:
         # Evaluate alert using decision engine
         decision = decision_engine.evaluate_alert(alert)
-        
+
         # Store decision in database for audit trail
         record = DecisionRecord(
             decision_id=decision.decision_id,
@@ -88,21 +88,18 @@ async def evaluate_alert(
             limitations=decision.limitations,
             rule_version=decision.rule_version,
             decided_at=decision.decided_at,
-            alert_data=alert.model_dump(mode='json'),
+            alert_data=alert.model_dump(mode="json"),
         )
-        
+
         db.add(record)
         db.commit()
         db.refresh(record)
-        
+
         return decision
-        
+
     except Exception as e:
         db.rollback()
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to evaluate alert: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Failed to evaluate alert: {str(e)}")
 
 
 @app.get("/api/v1/decisions/{decision_id}", response_model=Decision)
@@ -111,27 +108,22 @@ async def get_decision(
     db: Session = Depends(get_db),
 ) -> Decision:
     """Retrieve a decision by ID.
-    
+
     Args:
         decision_id: Unique decision identifier
         db: Database session (injected)
-        
+
     Returns:
         Decision object
-        
+
     Raises:
         HTTPException: 404 if decision not found
     """
-    record = db.query(DecisionRecord).filter(
-        DecisionRecord.decision_id == decision_id
-    ).first()
-    
+    record = db.query(DecisionRecord).filter(DecisionRecord.decision_id == decision_id).first()
+
     if not record:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Decision {decision_id} not found"
-        )
-    
+        raise HTTPException(status_code=404, detail=f"Decision {decision_id} not found")
+
     # Reconstruct Decision object from database record
     return Decision(
         decision_id=record.decision_id,
@@ -150,17 +142,21 @@ async def get_decision(
     )
 
 
-@app.get("/api/v1/decisions", response_model=List[Decision])
+@app.get("/api/v1/decisions", response_model=list[Decision])
 async def list_decisions(
     address: Optional[str] = Query(None, description="Filter by Ethereum address"),
-    risk_level: Optional[str] = Query(None, description="Filter by risk level (LOW/MEDIUM/HIGH/CRITICAL)"),
-    action: Optional[str] = Query(None, description="Filter by action (OBSERVE/WARN/FREEZE/ESCALATE)"),
+    risk_level: Optional[str] = Query(
+        None, description="Filter by risk level (LOW/MEDIUM/HIGH/CRITICAL)"
+    ),
+    action: Optional[str] = Query(
+        None, description="Filter by action (OBSERVE/WARN/FREEZE/ESCALATE)"
+    ),
     limit: int = Query(100, ge=1, le=1000, description="Maximum number of results"),
     offset: int = Query(0, ge=0, description="Number of results to skip"),
     db: Session = Depends(get_db),
-) -> List[Decision]:
+) -> list[Decision]:
     """List decisions with optional filtering.
-    
+
     Args:
         address: Filter by Ethereum address (optional)
         risk_level: Filter by risk level (optional)
@@ -168,45 +164,47 @@ async def list_decisions(
         limit: Maximum number of results (default: 100, max: 1000)
         offset: Number of results to skip for pagination (default: 0)
         db: Database session (injected)
-        
+
     Returns:
         List of Decision objects matching filters
     """
     # Build query with filters
     query = db.query(DecisionRecord)
-    
+
     if address:
         query = query.filter(DecisionRecord.address == address)
     if risk_level:
         query = query.filter(DecisionRecord.risk_level == risk_level.upper())
     if action:
         query = query.filter(DecisionRecord.action == action.upper())
-    
+
     # Order by decided_at descending (most recent first)
     query = query.order_by(DecisionRecord.decided_at.desc())
-    
+
     # Apply pagination
     records = query.offset(offset).limit(limit).all()
-    
+
     # Convert to Decision objects
     decisions = []
     for record in records:
-        decisions.append(Decision(
-            decision_id=record.decision_id,
-            alert_id=record.alert_id,
-            address=record.address,
-            risk_level=record.risk_level,
-            action=record.action,
-            confidence=record.confidence,
-            risk_score=record.risk_score,
-            rationale=record.rationale,
-            evidence_refs=record.evidence_refs,
-            recommendations=record.recommendations,
-            limitations=record.limitations,
-            rule_version=record.rule_version,
-            decided_at=record.decided_at,
-        ))
-    
+        decisions.append(
+            Decision(
+                decision_id=record.decision_id,
+                alert_id=record.alert_id,
+                address=record.address,
+                risk_level=record.risk_level,
+                action=record.action,
+                confidence=record.confidence,
+                risk_score=record.risk_score,
+                rationale=record.rationale,
+                evidence_refs=record.evidence_refs,
+                recommendations=record.recommendations,
+                limitations=record.limitations,
+                rule_version=record.rule_version,
+                decided_at=record.decided_at,
+            )
+        )
+
     return decisions
 
 
@@ -230,4 +228,5 @@ async def general_exception_handler(request, exc):
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=8000)

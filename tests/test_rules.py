@@ -1,7 +1,5 @@
 """Tests for rule evaluation engine."""
 
-import pytest
-
 from risklens.engine.rules import RuleEvaluator, create_default_rules
 from risklens.models import ActionType, Alert, PatternType, RuleDefinition
 
@@ -18,9 +16,9 @@ def test_rule_evaluator_basic() -> None:
             priority=10,
         )
     ]
-    
+
     evaluator = RuleEvaluator(rules)
-    
+
     # Alert that matches
     alert = Alert(
         address="0xtest",
@@ -28,7 +26,7 @@ def test_rule_evaluator_basic() -> None:
         score=0.9,
         time_window_sec=300,
     )
-    
+
     action = evaluator.evaluate(alert)
     assert action == ActionType.FREEZE
 
@@ -45,9 +43,9 @@ def test_rule_evaluator_no_match() -> None:
             priority=10,
         )
     ]
-    
+
     evaluator = RuleEvaluator(rules)
-    
+
     # Alert with low score
     alert = Alert(
         address="0xtest",
@@ -55,7 +53,7 @@ def test_rule_evaluator_no_match() -> None:
         score=0.5,
         time_window_sec=300,
     )
-    
+
     action = evaluator.evaluate(alert)
     assert action is None
 
@@ -80,16 +78,16 @@ def test_rule_evaluator_priority() -> None:
             priority=10,
         ),
     ]
-    
+
     evaluator = RuleEvaluator(rules)
-    
+
     alert = Alert(
         address="0xtest",
         pattern_type=PatternType.WASH_TRADING,
         score=0.7,
         time_window_sec=300,
     )
-    
+
     # Should match high priority rule
     action = evaluator.evaluate(alert)
     assert action == ActionType.FREEZE
@@ -107,9 +105,9 @@ def test_rule_evaluator_pattern_type_filter() -> None:
             priority=10,
         )
     ]
-    
+
     evaluator = RuleEvaluator(rules)
-    
+
     # Wash trading alert (different pattern)
     alert = Alert(
         address="0xtest",
@@ -117,7 +115,7 @@ def test_rule_evaluator_pattern_type_filter() -> None:
         score=0.9,
         time_window_sec=300,
     )
-    
+
     action = evaluator.evaluate(alert)
     assert action is None  # Rule doesn't apply
 
@@ -138,9 +136,9 @@ def test_rule_evaluator_multiple_conditions() -> None:
             priority=10,
         )
     ]
-    
+
     evaluator = RuleEvaluator(rules)
-    
+
     # All conditions match
     alert = Alert(
         address="0xtest",
@@ -152,10 +150,10 @@ def test_rule_evaluator_multiple_conditions() -> None:
             "total_volume_usd": 150000,
         },
     )
-    
+
     action = evaluator.evaluate(alert)
     assert action == ActionType.FREEZE
-    
+
     # One condition fails
     alert_fail = Alert(
         address="0xtest",
@@ -167,7 +165,7 @@ def test_rule_evaluator_multiple_conditions() -> None:
             "total_volume_usd": 150000,
         },
     )
-    
+
     action_fail = evaluator.evaluate(alert_fail)
     assert action_fail is None
 
@@ -183,11 +181,25 @@ def test_rule_evaluator_comparison_operators() -> None:
         action=ActionType.WARN,
         priority=10,
     )
-    
+
     evaluator = RuleEvaluator([rule_gt])
-    assert evaluator.evaluate(Alert(address="0x", pattern_type=PatternType.WASH_TRADING, score=0.6, time_window_sec=300)) == ActionType.WARN
-    assert evaluator.evaluate(Alert(address="0x", pattern_type=PatternType.WASH_TRADING, score=0.5, time_window_sec=300)) is None
-    
+    assert (
+        evaluator.evaluate(
+            Alert(
+                address="0x", pattern_type=PatternType.WASH_TRADING, score=0.6, time_window_sec=300
+            )
+        )
+        == ActionType.WARN
+    )
+    assert (
+        evaluator.evaluate(
+            Alert(
+                address="0x", pattern_type=PatternType.WASH_TRADING, score=0.5, time_window_sec=300
+            )
+        )
+        is None
+    )
+
     # Less than
     rule_lt = RuleDefinition(
         name="LT",
@@ -197,11 +209,25 @@ def test_rule_evaluator_comparison_operators() -> None:
         action=ActionType.OBSERVE,
         priority=10,
     )
-    
+
     evaluator = RuleEvaluator([rule_lt])
-    assert evaluator.evaluate(Alert(address="0x", pattern_type=PatternType.WASH_TRADING, score=0.4, time_window_sec=300)) == ActionType.OBSERVE
-    assert evaluator.evaluate(Alert(address="0x", pattern_type=PatternType.WASH_TRADING, score=0.5, time_window_sec=300)) is None
-    
+    assert (
+        evaluator.evaluate(
+            Alert(
+                address="0x", pattern_type=PatternType.WASH_TRADING, score=0.4, time_window_sec=300
+            )
+        )
+        == ActionType.OBSERVE
+    )
+    assert (
+        evaluator.evaluate(
+            Alert(
+                address="0x", pattern_type=PatternType.WASH_TRADING, score=0.5, time_window_sec=300
+            )
+        )
+        is None
+    )
+
     # Greater than or equal
     rule_gte = RuleDefinition(
         name="GTE",
@@ -211,10 +237,24 @@ def test_rule_evaluator_comparison_operators() -> None:
         action=ActionType.WARN,
         priority=10,
     )
-    
+
     evaluator = RuleEvaluator([rule_gte])
-    assert evaluator.evaluate(Alert(address="0x", pattern_type=PatternType.WASH_TRADING, score=0.5, time_window_sec=300)) == ActionType.WARN
-    assert evaluator.evaluate(Alert(address="0x", pattern_type=PatternType.WASH_TRADING, score=0.4, time_window_sec=300)) is None
+    assert (
+        evaluator.evaluate(
+            Alert(
+                address="0x", pattern_type=PatternType.WASH_TRADING, score=0.5, time_window_sec=300
+            )
+        )
+        == ActionType.WARN
+    )
+    assert (
+        evaluator.evaluate(
+            Alert(
+                address="0x", pattern_type=PatternType.WASH_TRADING, score=0.4, time_window_sec=300
+            )
+        )
+        is None
+    )
 
 
 def test_rule_evaluator_in_operator() -> None:
@@ -229,16 +269,16 @@ def test_rule_evaluator_in_operator() -> None:
             priority=10,
         )
     ]
-    
+
     evaluator = RuleEvaluator(rules)
-    
+
     alert = Alert(
         address="0xtest",
         pattern_type=PatternType.WASH_TRADING,
         score=0.7,
         time_window_sec=300,
     )
-    
+
     action = evaluator.evaluate(alert)
     assert action == ActionType.WARN
 
@@ -255,9 +295,9 @@ def test_rule_evaluator_between_operator() -> None:
             priority=10,
         )
     ]
-    
+
     evaluator = RuleEvaluator(rules)
-    
+
     # In range
     alert_in = Alert(
         address="0xtest",
@@ -266,7 +306,7 @@ def test_rule_evaluator_between_operator() -> None:
         time_window_sec=300,
     )
     assert evaluator.evaluate(alert_in) == ActionType.WARN
-    
+
     # Out of range (too low)
     alert_low = Alert(
         address="0xtest",
@@ -275,7 +315,7 @@ def test_rule_evaluator_between_operator() -> None:
         time_window_sec=300,
     )
     assert evaluator.evaluate(alert_low) is None
-    
+
     # Out of range (too high)
     alert_high = Alert(
         address="0xtest",
@@ -299,16 +339,16 @@ def test_rule_evaluator_disabled_rule() -> None:
             enabled=False,
         )
     ]
-    
+
     evaluator = RuleEvaluator(rules)
-    
+
     alert = Alert(
         address="0xtest",
         pattern_type=PatternType.WASH_TRADING,
         score=0.9,
         time_window_sec=300,
     )
-    
+
     action = evaluator.evaluate(alert)
     assert action is None  # Rule is disabled
 
@@ -325,9 +365,9 @@ def test_rule_evaluator_nested_field_access() -> None:
             priority=10,
         )
     ]
-    
+
     evaluator = RuleEvaluator(rules)
-    
+
     alert = Alert(
         address="0xtest",
         pattern_type=PatternType.WASH_TRADING,
@@ -335,7 +375,7 @@ def test_rule_evaluator_nested_field_access() -> None:
         time_window_sec=300,
         features={"counterparty_diversity": 2},
     )
-    
+
     action = evaluator.evaluate(alert)
     assert action == ActionType.WARN
 
@@ -343,11 +383,11 @@ def test_rule_evaluator_nested_field_access() -> None:
 def test_create_default_rules() -> None:
     """Test that default rules are created correctly."""
     rules = create_default_rules()
-    
+
     assert len(rules) > 0
     assert all(isinstance(r, RuleDefinition) for r in rules)
     assert all(r.enabled for r in rules)
-    
+
     # Check that rules are sorted by priority
     priorities = [r.priority for r in rules]
     assert priorities == sorted(priorities, reverse=True)
@@ -356,7 +396,7 @@ def test_create_default_rules() -> None:
 def test_rule_evaluator_with_default_rules() -> None:
     """Test evaluator with default rule set."""
     evaluator = RuleEvaluator(create_default_rules())
-    
+
     # High-confidence wash trading
     alert_high = Alert(
         address="0xtest",
@@ -368,10 +408,10 @@ def test_rule_evaluator_with_default_rules() -> None:
             "total_volume_usd": 150000,
         },
     )
-    
+
     action_high = evaluator.evaluate(alert_high)
     assert action_high in [ActionType.FREEZE, ActionType.ESCALATE]
-    
+
     # Low-confidence alert
     alert_low = Alert(
         address="0xtest",
@@ -383,6 +423,6 @@ def test_rule_evaluator_with_default_rules() -> None:
             "total_volume_usd": 5000,
         },
     )
-    
+
     action_low = evaluator.evaluate(alert_low)
     assert action_low in [ActionType.OBSERVE, None]

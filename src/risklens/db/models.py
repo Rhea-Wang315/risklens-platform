@@ -11,7 +11,7 @@ Base = declarative_base()
 
 class DecisionRecord(Base):
     """Decision record for audit trail.
-    
+
     Stores all decisions made by the risk engine, including:
     - Input alert data (for reproducibility)
     - Decision output (action, confidence, rationale)
