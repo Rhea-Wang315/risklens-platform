@@ -137,6 +137,23 @@ risklens serve
 
 The API will be available at `http://localhost:8000`. Check health: `curl http://localhost:8000/health`
 
+### Docker Deployment (Recommended for Production)
+
+```bash
+# Build the Docker image
+docker build -t risklens:latest .
+
+# Run with docker-compose (includes PostgreSQL + Redis)
+docker-compose up -d
+
+# Or run standalone (requires external database)
+docker run -d \
+  --name risklens-api \
+  -p 8000:8000 \
+  -e DATABASE_URL=postgresql://user:pass@host:5432/risklens \
+  risklens:latest
+```
+
 ### Run Example
 
 ```bash
