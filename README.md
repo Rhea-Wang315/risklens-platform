@@ -178,6 +178,33 @@ curl -X POST http://localhost:8000/api/v1/evaluate \
 }
 ```
 
+### Kafka Event Streaming
+
+RiskLens publishes decision events to Kafka for real-time integration with other systems.
+
+```bash
+# Start all services (including Kafka)
+docker-compose up -d
+
+# Run the example consumer to see decision events
+python -m risklens.streaming.consumer
+
+# In another terminal, submit an alert
+curl -X POST http://localhost:8000/api/v1/evaluate \
+  -H "Content-Type: application/json" \
+  -d @examples/example_alert.json
+
+# Consumer will print:
+# INFO - Received decision: id=dec_abc123, risk=HIGH, action=FREEZE, address=0x742d...
+# WARNING - ⚠️  HIGH RISK ALERT: 0x742d... - Action: FREEZE
+```
+
+**Use cases**:
+- Real-time alerting (Slack, PagerDuty)
+- Dashboard updates (Grafana, custom UI)
+- Automated actions (account freezing, compliance workflows)
+- Audit log streaming to external systems
+
 ---
 
 ## Project Status
