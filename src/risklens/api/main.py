@@ -24,6 +24,7 @@ from risklens.db.session import get_db
 from risklens.engine.decision import DecisionEngine
 from risklens.engine.rule_store import get_rule_store
 from risklens.models import Alert, Decision, RuleDefinition
+from risklens.streaming import get_producer
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -95,6 +96,10 @@ async def evaluate_alert(
         db.add(record)
         db.commit()
         db.refresh(record)
+
+        # Publish decision to Kafka for real-time streaming
+        kafka_producer = get_producer()
+        kafka_producer.publish_decision(decision)
 
         return decision
 
