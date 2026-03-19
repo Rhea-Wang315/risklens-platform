@@ -232,6 +232,43 @@ curl -X POST http://localhost:8000/api/v1/evaluate \
 - [ ] Address profiling with graph analysis
 - [ ] Risk Agent (autonomous decision-making)
 
+### Rules Management API
+
+Dynamically manage risk rules without code deployment.
+
+```bash
+# List all rules
+curl http://localhost:8000/api/v1/rules
+
+# Create a new rule
+curl -X POST http://localhost:8000/api/v1/rules \
+  -H "Content-Type: application/json" \
+  -d '{
+    "rule_id": "custom_high_risk",
+    "name": "Custom High Risk Rule",
+    "description": "Freeze accounts with score > 0.9",
+    "pattern_types": ["WASH_TRADING"],
+    "conditions": {"score": {"gte": 0.9}},
+    "action": "FREEZE",
+    "priority": 200,
+    "enabled": true
+  }'
+
+# Update a rule
+curl -X PUT http://localhost:8000/api/v1/rules/custom_high_risk \
+  -H "Content-Type: application/json" \
+  -d '{...}'
+
+# Delete a rule
+curl -X DELETE http://localhost:8000/api/v1/rules/custom_high_risk
+```
+
+**Benefits**:
+- No code deployment needed to adjust rules
+- A/B test different rule configurations
+- Quick response to new attack patterns
+- Audit trail of rule changes
+
 
 ---
 

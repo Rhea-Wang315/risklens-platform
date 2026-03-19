@@ -22,7 +22,8 @@ from sqlalchemy.orm import Session
 from risklens.db.models import DecisionRecord
 from risklens.db.session import get_db
 from risklens.engine.decision import DecisionEngine
-from risklens.models import Alert, Decision
+from risklens.engine.rule_store import get_rule_store
+from risklens.models import Alert, Decision, RuleDefinition
 from risklens.streaming import get_producer
 
 # Initialize FastAPI app
@@ -211,6 +212,103 @@ async def list_decisions(
         )
 
     return decisions
+
+
+# Rules Management Endpoints
+
+
+@app.get("/api/v1/rules", response_model=list[RuleDefinition])
+async def list_rules(
+    enabled_only: bool = Query(False, description="Only return enabled rules")
+) -> list[RuleDefinition]:
+    """List all rules.
+
+    Args:
+        enabled_only: If True, only return enabled rules
+
+    Returns:
+        List of rules sorted by priority
+    """
+    rule_store = get_rule_store()
+    return rule_store.list_all(enabled_only=enabled_only)
+
+
+@app.post("/api/v1/rules", response_model=RuleDefinition, status_code=201)
+async def create_rule(rule: RuleDefinition) -> RuleDefinition:
+    """Create a new rule.
+
+    Args:
+        rule: Rule definition
+
+    Returns:
+        Created rule
+
+    Raises:
+        HTTPException: 400 if rule with same ID exists
+    """
+    try:
+        rule_store = get_rule_store()
+        return rule_store.create(rule)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.get("/api/v1/rules/{rule_id}", response_model=RuleDefinition)
+async def get_rule(rule_id: str) -> RuleDefinition:
+    """Get a rule by ID.
+
+    Args:
+        rule_id: Rule ID
+
+    Returns:
+        Rule definition
+
+    Raises:
+        HTTPException: 404 if rule not found
+    """
+    rule_store = get_rule_store()
+    rule = rule_store.get(rule_id)
+    if not rule:
+        raise HTTPException(status_code=404, detail=f"Rule {rule_id} not found")
+    return rule
+
+
+@app.put("/api/v1/rules/{rule_id}", response_model=RuleDefinition)
+async def update_rule(rule_id: str, rule: RuleDefinition) -> RuleDefinition:
+    """Update an existing rule.
+
+    Args:
+        rule_id: Rule ID to update
+        rule: New rule definition
+
+    Returns:
+        Updated rule
+
+    Raises:
+        HTTPException: 400 if validation fails, 404 if not found
+    """
+    try:
+        rule_store = get_rule_store()
+        return rule_store.update(rule_id, rule)
+    except ValueError as e:
+        if "not found" in str(e):
+            raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.delete("/api/v1/rules/{rule_id}", status_code=204)
+async def delete_rule(rule_id: str):
+    """Delete a rule.
+
+    Args:
+        rule_id: Rule ID to delete
+
+    Raises:
+        HTTPException: 404 if rule not found
+    """
+    rule_store = get_rule_store()
+    if not rule_store.delete(rule_id):
+        raise HTTPException(status_code=404, detail=f"Rule {rule_id} not found")
 
 
 @app.exception_handler(ValueError)
