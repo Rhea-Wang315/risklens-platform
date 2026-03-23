@@ -137,6 +137,29 @@ risklens serve
 
 The API will be available at `http://localhost:8000`. Check health: `curl http://localhost:8000/health`
 
+### Streamlit Operator Dashboard (MVP)
+
+For interview demos, RiskLens includes a lightweight Streamlit UI that talks to the API over HTTP.
+
+```bash
+# Install dashboard dependencies
+pip install -e ".[dev,dashboard]"
+
+# Terminal 1: start the API
+risklens serve
+
+# Terminal 2: start the dashboard
+streamlit run dashboard/app.py
+```
+
+Open the dashboard at `http://localhost:8501`.
+
+If your API is not running on `http://localhost:8000`, set:
+
+```bash
+export RISKLENS_API_BASE_URL=http://localhost:8000
+```
+
 ### Docker Deployment (Recommended for Production)
 
 ```bash
@@ -222,9 +245,10 @@ curl -X POST http://localhost:8000/api/v1/evaluate \
 - [ ] Alert manager with Slack integration
 - [ ] K8s deployment manifests
 ### Phase 3: Operator Dashboard 📋 (Planned)
-- [ ] Alert management UI
+- [x] Streamlit operator dashboard (MVP)
+- [ ] Alert management UI (advanced filters, triage workflow)
 - [ ] Address profiling
-- [ ] Rule management interface
+- [x] Rule management interface (via API + dashboard)
 - [ ] Metrics dashboard
 
 ### Phase 4: AI Enhancement 💡 (Future)

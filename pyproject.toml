@@ -41,6 +41,10 @@ dev = [
   "httpx>=0.26.0",  # for testing
 ]
 
+dashboard = [
+  "streamlit>=1.35.0",
+]
+
 [project.scripts]
 risklens = "risklens.cli:app"
 
