@@ -135,7 +135,17 @@ risklens db init
 risklens serve
 ```
 
+If your machine already has something bound to port 5432 (common on macOS with a system-wide PostgreSQL install), either stop it or change the Postgres port mapping in `docker-compose.yml`.
+
+To stop an EnterpriseDB PostgreSQL 15 service (if you have it installed):
+
+```bash
+sudo /Library/PostgreSQL/15/bin/pg_ctl -D /Library/PostgreSQL/15/data stop -m fast
+```
+
 The API will be available at `http://localhost:8000`. Check health: `curl http://localhost:8000/health`
+
+Prometheus metrics are exposed at `http://localhost:8000/metrics`.
 
 ### Streamlit Operator Dashboard (MVP)
 
@@ -159,6 +169,17 @@ If your API is not running on `http://localhost:8000`, set:
 ```bash
 export RISKLENS_API_BASE_URL=http://localhost:8000
 ```
+
+### Observability (Prometheus + Grafana)
+
+Run Prometheus + Grafana via Docker (the API runs on your host and is scraped at `host.docker.internal:8000`):
+
+```bash
+docker-compose -f docker-compose.observability.yml up -d
+```
+
+- Prometheus: http://localhost:9090
+- Grafana: http://localhost:3000 (admin/admin)
 
 ### Docker Deployment (Recommended for Production)
 
