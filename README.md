@@ -135,12 +135,19 @@ risklens db init
 risklens serve
 ```
 
-If your machine already has something bound to port 5432 (common on macOS with a system-wide PostgreSQL install), either stop it or change the Postgres port mapping in `docker-compose.yml`.
+If your machine already has something bound to port 5432 (common on macOS with a system-wide PostgreSQL install), either stop it or change the Postgres port mapping.
 
 To stop an EnterpriseDB PostgreSQL 15 service (if you have it installed):
 
 ```bash
 sudo /Library/PostgreSQL/15/bin/pg_ctl -D /Library/PostgreSQL/15/data stop -m fast
+```
+
+Or use the provided dev override to run Postgres on 5433:
+
+```bash
+docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+export DATABASE_URL=postgresql://risklens:risklens_dev_password@localhost:5433/risklens
 ```
 
 The API will be available at `http://localhost:8000`. Check health: `curl http://localhost:8000/health`
