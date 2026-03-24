@@ -13,10 +13,12 @@ Design Philosophy:
 - OpenAPI documentation auto-generated
 """
 
+import time
 from typing import Optional
 
-from fastapi import Depends, FastAPI, HTTPException, Query
+from fastapi import Depends, FastAPI, HTTPException, Query, Response
 from fastapi.responses import JSONResponse
+from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from sqlalchemy.orm import Session
 
 from risklens.db.models import DecisionRecord
@@ -24,6 +26,11 @@ from risklens.db.session import get_db
 from risklens.engine.decision import DecisionEngine
 from risklens.engine.rule_store import get_rule_store
 from risklens.models import Alert, Decision, RuleDefinition
+from risklens.observability.metrics import (
+    DECISIONS_TOTAL,
+    EVALUATE_LATENCY_SECONDS,
+    EVALUATE_REQUESTS_TOTAL,
+)
 from risklens.streaming import get_producer
 
 # Initialize FastAPI app
@@ -49,6 +56,12 @@ async def health_check() -> dict:
     return {"status": "ok", "service": "risklens-platform", "version": "0.1.0"}
 
 
+@app.get("/metrics")
+async def metrics() -> Response:
+    data = generate_latest()
+    return Response(content=data, media_type=CONTENT_TYPE_LATEST)
+
+
 @app.post("/api/v1/evaluate", response_model=Decision, status_code=201)
 async def evaluate_alert(
     alert: Alert,
@@ -71,6 +84,7 @@ async def evaluate_alert(
     Raises:
         HTTPException: 400 if alert is invalid, 500 if internal error
     """
+    start = time.perf_counter()
     try:
         # Evaluate alert using decision engine
         decision = decision_engine.evaluate_alert(alert)
@@ -101,11 +115,21 @@ async def evaluate_alert(
         kafka_producer = get_producer()
         kafka_producer.publish_decision(decision)
 
+        EVALUATE_REQUESTS_TOTAL.labels(result="success").inc()
+        DECISIONS_TOTAL.labels(
+            action=decision.action.value,
+            risk_level=decision.risk_level.value,
+        ).inc()
+
         return decision
 
     except Exception as e:
+        EVALUATE_REQUESTS_TOTAL.labels(result="error").inc()
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to evaluate alert: {str(e)}")
+
+    finally:
+        EVALUATE_LATENCY_SECONDS.observe(time.perf_counter() - start)
 
 
 @app.get("/api/v1/decisions/{decision_id}", response_model=Decision)
@@ -219,7 +243,7 @@ async def list_decisions(
 
 @app.get("/api/v1/rules", response_model=list[RuleDefinition])
 async def list_rules(
-    enabled_only: bool = Query(False, description="Only return enabled rules")
+    enabled_only: bool = Query(False, description="Only return enabled rules"),
 ) -> list[RuleDefinition]:
     """List all rules.
 
