@@ -1,0 +1,47 @@
+{
+  "uid": "risklens-overview",
+  "title": "RiskLens Overview",
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "5s",
+  "tags": ["risklens", "week3"],
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Evaluate Requests (rate)",
+      "gridPos": {"x": 0, "y": 0, "w": 12, "h": 8},
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (result) (rate(risklens_evaluate_requests_total[1m]))",
+          "legendFormat": "{{result}}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Evaluate Latency p95 (seconds)",
+      "gridPos": {"x": 12, "y": 0, "w": 12, "h": 8},
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum(rate(risklens_evaluate_latency_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p95"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Decisions (rate by action)",
+      "gridPos": {"x": 0, "y": 8, "w": 24, "h": 8},
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (action) (rate(risklens_decisions_total[1m]))",
+          "legendFormat": "{{action}}"
+        }
+      ]
+    }
+  ]
+}

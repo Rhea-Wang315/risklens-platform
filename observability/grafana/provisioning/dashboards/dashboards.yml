@@ -1,0 +1,11 @@
+apiVersion: 1
+
+providers:
+  - name: RiskLens
+    orgId: 1
+    folder: RiskLens
+    type: file
+    disableDeletion: false
+    editable: true
+    options:
+      path: /var/lib/grafana/dashboards

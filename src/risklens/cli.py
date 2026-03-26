@@ -48,7 +48,7 @@ def check_db_connection() -> bool:
         typer.echo("\nTroubleshooting:", err=True)
         typer.echo("  1. Check if PostgreSQL is running: docker-compose up -d", err=True)
         typer.echo("  2. Verify DATABASE_URL in .env matches docker-compose.yml", err=True)
-        typer.echo("  3. Default port should be 5432 (not 5433)", err=True)
+        typer.echo("  3. Default port is 5432 (or use docker-compose.dev.yml for 5433)", err=True)
         return False
 
 

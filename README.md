@@ -135,6 +135,12 @@ risklens db init
 risklens serve
 ```
 
+For a fully-scripted local demo (DB + migrations + API + dashboard + observability):
+
+```bash
+./scripts/demo.sh
+```
+
 If your machine already has something bound to port 5432 (common on macOS with a system-wide PostgreSQL install), either stop it or change the Postgres port mapping.
 
 To stop an EnterpriseDB PostgreSQL 15 service (if you have it installed):
