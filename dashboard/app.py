@@ -2,13 +2,49 @@ from __future__ import annotations
 
 import json
 import os
-from typing import Any, Optional
+from typing import Any
 
 import httpx
 import streamlit as st
 
-
 DEFAULT_API_BASE_URL = os.getenv("RISKLENS_API_BASE_URL", "http://localhost:8000")
+
+
+def _demo_alert_payload(i: int) -> dict[str, Any]:
+    pattern_types = [
+        "WASH_TRADING",
+        "SANDWICH_ATTACK",
+        "VOLUME_INFLATION",
+        "BURST_TRADING",
+        "ROUNDTRIP",
+        "UNKNOWN",
+    ]
+    score = round(0.2 + (i % 20) * 0.04, 2)
+    return {
+        "alert_id": f"demo_alert_{i:04d}",
+        "address": "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb",
+        "chain": "ethereum",
+        "pool": "0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640",
+        "pair": "WETH/USDC",
+        "time_window_sec": 300,
+        "pattern_type": pattern_types[i % len(pattern_types)],
+        "score": score,
+        "features": {
+            "counterparty_diversity": 2,
+            "roundtrip_count": 15,
+            "total_volume_usd": 125000,
+            "avg_time_between_trades_sec": 18,
+        },
+        "evidence_samples": [
+            {
+                "tx_hash": "0xabc123...",
+                "timestamp": "2026-02-25T10:30:00Z",
+                "action": "swap",
+                "amount_usd": 5000,
+            }
+        ],
+        "detected_at": "2026-02-25T10:35:00Z",
+    }
 
 
 def _safe_json_object(raw: str) -> dict[str, Any]:
@@ -40,7 +76,7 @@ def _client() -> httpx.Client:
     return httpx.Client(timeout=httpx.Timeout(10.0, connect=5.0))
 
 
-def _api_get(base_url: str, path: str, params: Optional[dict[str, Any]] = None) -> Any:
+def _api_get(base_url: str, path: str, params: dict[str, Any] | None = None) -> Any:
     with _client() as client:
         resp = client.get(f"{base_url}{path}", params=params)
         resp.raise_for_status()
@@ -360,7 +396,23 @@ def main() -> None:
         base_url = st.text_input("API Base URL", value=DEFAULT_API_BASE_URL)
         st.caption("Tip: set RISKLENS_API_BASE_URL to avoid retyping")
         st.divider()
+        st.subheader("Demo")
+        demo_count = st.number_input(
+            "Generate decisions", min_value=1, max_value=200, value=25, step=5
+        )
+        demo_generate = st.button("Generate Demo Data")
+        st.divider()
         page = st.radio("Page", options=["Recent Decisions", "Evaluate Alert", "Rules"], index=0)
+
+    if demo_generate:
+        try:
+            for i in range(int(demo_count)):
+                _api_post(base_url, "/api/v1/evaluate", _demo_alert_payload(i))
+            st.success(f"Generated {int(demo_count)} decisions")
+            st.cache_data.clear()
+        except Exception as e:
+            st.error("Failed to generate demo data")
+            st.caption(str(e))
 
     _render_health(base_url)
     st.divider()
