@@ -141,6 +141,18 @@ For a fully-scripted local demo (DB + migrations + API + dashboard + observabili
 ./scripts/demo.sh
 ```
 
+To stop everything started by the demo:
+
+```bash
+./scripts/demo_stop.sh
+```
+
+To generate more decisions for the UI and Grafana charts:
+
+```bash
+python scripts/seed_demo.py --count 50
+```
+
 If your machine already has something bound to port 5432 (common on macOS with a system-wide PostgreSQL install), either stop it or change the Postgres port mapping.
 
 To stop an EnterpriseDB PostgreSQL 15 service (if you have it installed):
