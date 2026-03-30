@@ -278,15 +278,16 @@ curl -X POST http://localhost:8000/api/v1/evaluate \
 
 ## Project Status
 
-### Phase 1: Decision Engine 🚧 (Current - In Progress)
-- [ ] Rule DSL implementation
-- [ ] Multi-dimensional risk scoring
-- [ ] PostgreSQL audit trail
-- [ ] FastAPI service with core endpoints
-- [ ] Unit tests (target: 80%+ coverage)
+### Phase 1: Decision Engine ✅ (Implemented)
+- [x] Rule definitions (JSON conditions) + CRUD API
+- [x] Multi-dimensional risk scoring
+- [x] PostgreSQL decision/audit storage
+- [x] FastAPI service with core endpoints
+- [x] Unit tests + CI coverage reporting
 
 ### Phase 2: Real-time Monitoring 📋 (Planned)
-- [ ] Kafka/Redis event streaming
+- [x] Kafka decision event publishing
+- [ ] Kafka/Redis event streaming (end-to-end consumer + workflows)
 - [ ] Real-time detection pipeline
 - [ ] Alert manager with Slack integration
 - [ ] K8s deployment manifests
@@ -295,7 +296,7 @@ curl -X POST http://localhost:8000/api/v1/evaluate \
 - [ ] Alert management UI (advanced filters, triage workflow)
 - [ ] Address profiling
 - [x] Rule management interface (via API + dashboard)
-- [ ] Metrics dashboard
+- [x] Metrics dashboard (Prometheus + Grafana)
 
 ### Phase 4: AI Enhancement 💡 (Future)
 - [ ] Anomaly pattern discovery (unsupervised learning)
@@ -419,13 +420,12 @@ This is part of a 3-project series on Web3 risk management:
 ---
 
 ## Development Roadmap
-**Current Focus**: Phase 1 - Decision Engine
-Building the core rule engine and risk scoring system that converts detection alerts into actionable decisions.
+**Current Focus**: Phase 3 - Operator Dashboard + Observability
+
 **Next Milestones**:
-- Complete database models and audit trail
-- Implement rule DSL and decision logic
-- Build FastAPI service with core endpoints
-- Achieve 80%+ test coverage
+- Address profiling (API + dashboard page)
+- Alert management workflow (triage + filtering)
+- Slack alert integration + runbooks
 
 ---
 
