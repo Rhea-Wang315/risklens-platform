@@ -153,6 +153,20 @@ To generate more decisions for the UI and Grafana charts:
 python scripts/seed_demo.py --count 50
 ```
 
+Run the Week 2 impact-analysis pipeline (case-study outputs):
+
+```bash
+python scripts/week2_impact_analysis.py \
+  --input analysis/data/sample_week2_alerts.jsonl \
+  --output-dir analysis/output
+```
+
+Generated artifacts:
+- `analysis/output/decisions.csv`
+- `analysis/output/impact_summary.json`
+- `analysis/output/impact_summary.md`
+- `analysis/output/incident_report_draft.md`
+
 If your machine already has something bound to port 5432 (common on macOS with a system-wide PostgreSQL install), either stop it or change the Postgres port mapping.
 
 To stop an EnterpriseDB PostgreSQL 15 service (if you have it installed):
