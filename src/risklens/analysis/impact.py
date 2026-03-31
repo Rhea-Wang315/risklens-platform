@@ -119,7 +119,9 @@ def _extract_features(raw: dict[str, Any]) -> dict[str, Any]:
 def _build_record(raw: dict[str, Any]) -> AlertRecord:
     features = _extract_features(raw)
     total_volume = _as_float(features.get("total_volume_usd"), default=0.0)
-    subsequent_volume = _as_float(raw.get("subsequent_transactions_volume_usd"), default=total_volume)
+    subsequent_volume = _as_float(
+        raw.get("subsequent_transactions_volume_usd"), default=total_volume
+    )
 
     evidence_samples = raw.get("evidence_samples")
     if not isinstance(evidence_samples, list):
@@ -279,7 +281,9 @@ def summarize_decisions(
         "predicted_positive_alerts": predicted_positive,
         "true_positives": true_positives,
         "false_positives": false_positives,
-        "false_positive_rate": None if false_positive_rate is None else round(false_positive_rate, 4),
+        "false_positive_rate": (
+            None if false_positive_rate is None else round(false_positive_rate, 4)
+        ),
         "actual_true_attacks": actual_true_attacks,
         "freeze_on_true_attacks": freeze_on_true_attacks,
         "freeze_recall": None if freeze_recall is None else round(freeze_recall, 4),
