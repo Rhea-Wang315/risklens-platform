@@ -61,6 +61,36 @@ outputs/
 *.parquet
 *.csv
 
+# Week 2 analysis artifacts (portfolio/demo assets)
+!analysis/
+!analysis/data/
+!analysis/data/sample_week2_alerts.jsonl
+!analysis/output/
+!analysis/output/decisions.csv
+!analysis/output/impact_summary.json
+!analysis/output/impact_summary.md
+!analysis/output/incident_report_draft.md
+
+# Week 2 analysis artifacts (portfolio/demo assets)
+!analysis/
+!analysis/data/
+!analysis/data/sample_week2_alerts.jsonl
+!analysis/output/
+!analysis/output/decisions.csv
+!analysis/output/impact_summary.json
+!analysis/output/impact_summary.md
+!analysis/output/incident_report_draft.md
+
+# Week 2 analysis artifacts (portfolio/demo assets)
+!analysis/
+!analysis/data/
+!analysis/data/sample_week2_alerts.jsonl
+!analysis/output/
+!analysis/output/decisions.csv
+!analysis/output/impact_summary.json
+!analysis/output/impact_summary.md
+!analysis/output/incident_report_draft.md
+
 # Private documentation (for personal use only)
 ROADMAP.md
 PHASE1_QUICKSTART.md
@@ -74,3 +104,13 @@ data/
 outputs/
 *.parquet
 *.csv
+
+# Week 2 analysis artifacts (portfolio/demo assets)
+!analysis/
+!analysis/data/
+!analysis/data/sample_week2_alerts.jsonl
+!analysis/output/
+!analysis/output/decisions.csv
+!analysis/output/impact_summary.json
+!analysis/output/impact_summary.md
+!analysis/output/incident_report_draft.md
