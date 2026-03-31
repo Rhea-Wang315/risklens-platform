@@ -68,6 +68,7 @@ PHASE1_QUICKSTART.md
 PR_WEEK3_*.md
 PR_LOCAL_*.md
 research.md
+!docs/archive/ROADMAP.md
 
 .demo/
 data/

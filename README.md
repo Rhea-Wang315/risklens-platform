@@ -285,13 +285,13 @@ curl -X POST http://localhost:8000/api/v1/evaluate \
 - [x] FastAPI service with core endpoints
 - [x] Unit tests + CI coverage reporting
 
-### Phase 2: Real-time Monitoring 📋 (Planned)
+### Phase 2: Real-time Monitoring 🚧 (In Progress)
 - [x] Kafka decision event publishing
 - [ ] Kafka/Redis event streaming (end-to-end consumer + workflows)
 - [ ] Real-time detection pipeline
 - [ ] Alert manager with Slack integration
 - [ ] K8s deployment manifests
-### Phase 3: Operator Dashboard 📋 (Planned)
+### Phase 3: Operator Dashboard 🚧 (In Progress)
 - [x] Streamlit operator dashboard (MVP)
 - [ ] Alert management UI (advanced filters, triage workflow)
 - [ ] Address profiling
@@ -421,6 +421,10 @@ This is part of a 3-project series on Web3 risk management:
 
 ## Development Roadmap
 **Current Focus**: Phase 3 - Operator Dashboard + Observability
+
+Historical planning docs are archived in `docs/archive/`:
+- `docs/archive/ACTION_PLAN.md`
+- `docs/archive/ROADMAP.md`
 
 **Next Milestones**:
 - Address profiling (API + dashboard page)
