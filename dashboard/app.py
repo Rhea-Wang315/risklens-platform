@@ -386,6 +386,71 @@ def _page_rules(base_url: str) -> None:
                 st.caption(str(e))
 
 
+def _page_address_profile(base_url: str) -> None:
+    st.header("Address Profile")
+    st.caption("Quick risk profile for one address based on decision history")
+
+    with st.sidebar:
+        st.subheader("Address Profile")
+        address = st.text_input(
+            "Address to Profile", value="0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb"
+        )
+        recent_limit = st.number_input(
+            "Recent decisions", min_value=1, max_value=200, value=20, step=5
+        )
+        load_profile = st.button("Load Profile")
+
+    if not load_profile and "address_profile_data" not in st.session_state:
+        st.info("Enter an address and click 'Load Profile'.")
+        return
+
+    if load_profile:
+        try:
+            path = f"/api/v1/addresses/{address.strip()}/profile"
+            profile = _api_get(base_url, path, params={"recent_limit": int(recent_limit)})
+            if not isinstance(profile, dict):
+                raise ValueError("Profile response must be a JSON object")
+            st.session_state["address_profile_data"] = profile
+            st.session_state["address_profile_address"] = address.strip()
+        except httpx.HTTPStatusError as e:
+            st.error("API returned an error")
+            try:
+                st.json(e.response.json())
+            except Exception:
+                st.text(e.response.text)
+            return
+        except Exception as e:
+            st.error("Failed to load address profile")
+            st.caption(str(e))
+            return
+
+    profile = st.session_state.get("address_profile_data")
+    if not isinstance(profile, dict):
+        st.info("No profile loaded yet.")
+        return
+
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Total Decisions", str(profile.get("total_decisions", 0)))
+    c2.metric("Avg Risk Score", str(profile.get("avg_risk_score", 0)))
+    c3.metric("Most Recent", str(profile.get("latest_decided_at", "N/A")))
+
+    st.subheader("Action Distribution")
+    st.json(profile.get("action_counts", {}))
+
+    st.subheader("Risk Level Distribution")
+    st.json(profile.get("risk_level_counts", {}))
+
+    st.subheader("Pattern Type Distribution")
+    st.json(profile.get("pattern_type_counts", {}))
+
+    st.subheader("Recent Decisions")
+    recent_decisions = profile.get("recent_decisions", [])
+    if isinstance(recent_decisions, list) and recent_decisions:
+        st.dataframe(recent_decisions, use_container_width=True)
+    else:
+        st.info("No recent decisions available.")
+
+
 def main() -> None:
     st.set_page_config(page_title="RiskLens Dashboard", layout="wide")
     st.title("RiskLens Operator Dashboard")
@@ -402,7 +467,11 @@ def main() -> None:
         )
         demo_generate = st.button("Generate Demo Data")
         st.divider()
-        page = st.radio("Page", options=["Recent Decisions", "Evaluate Alert", "Rules"], index=0)
+        page = st.radio(
+            "Page",
+            options=["Recent Decisions", "Evaluate Alert", "Rules", "Address Profile"],
+            index=0,
+        )
 
     if demo_generate:
         try:
@@ -421,8 +490,10 @@ def main() -> None:
         _page_recent_decisions(base_url)
     elif page == "Evaluate Alert":
         _page_evaluate_alert(base_url)
-    else:
+    elif page == "Rules":
         _page_rules(base_url)
+    else:
+        _page_address_profile(base_url)
 
 
 if __name__ == "__main__":
