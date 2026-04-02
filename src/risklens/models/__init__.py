@@ -163,3 +163,27 @@ class RuleDefinition(BaseModel):
                 "priority": 10,
             }
         }
+
+
+class AddressProfile(BaseModel):
+    """Aggregated risk profile for an address."""
+
+    address: str = Field(..., description="Address under investigation")
+    total_decisions: int = Field(..., ge=0, description="Total decisions for this address")
+    avg_risk_score: float = Field(..., ge=0.0, le=100.0, description="Average risk score")
+    first_decided_at: Optional[datetime] = Field(
+        None, description="Timestamp of earliest decision for this address"
+    )
+    latest_decided_at: Optional[datetime] = Field(
+        None, description="Timestamp of latest decision for this address"
+    )
+    action_counts: dict[str, int] = Field(default_factory=dict, description="Action distribution")
+    risk_level_counts: dict[str, int] = Field(
+        default_factory=dict, description="Risk level distribution"
+    )
+    pattern_type_counts: dict[str, int] = Field(
+        default_factory=dict, description="Detected pattern type distribution"
+    )
+    recent_decisions: list[Decision] = Field(
+        default_factory=list, description="Most recent decisions for this address"
+    )
