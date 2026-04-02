@@ -1,5 +1,7 @@
 """Integration tests for FastAPI endpoints."""
 
+from datetime import datetime
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
@@ -339,3 +341,81 @@ def test_evaluate_alert_invalid_score(test_client: TestClient) -> None:
 
     response = test_client.post("/api/v1/evaluate", json=alert_data)
     assert response.status_code == 422  # Validation error
+
+
+def test_get_address_profile_success(test_client: TestClient, db_session: Session) -> None:
+    """Test address profile aggregation endpoint."""
+    records = [
+        DecisionRecord(
+            decision_id="p1",
+            alert_id="a1",
+            address="0xprofile",
+            risk_level="HIGH",
+            action="FREEZE",
+            confidence=0.95,
+            risk_score=88.0,
+            rationale="r1",
+            evidence_refs=[],
+            recommendations=[],
+            limitations=[],
+            rule_version="v1.0.0",
+            decided_at=datetime(2026, 3, 1, 12, 0, 0),
+            alert_data={"pattern_type": "WASH_TRADING"},
+        ),
+        DecisionRecord(
+            decision_id="p2",
+            alert_id="a2",
+            address="0xprofile",
+            risk_level="MEDIUM",
+            action="WARN",
+            confidence=0.7,
+            risk_score=55.0,
+            rationale="r2",
+            evidence_refs=[],
+            recommendations=[],
+            limitations=[],
+            rule_version="v1.0.0",
+            decided_at=datetime(2026, 3, 1, 13, 0, 0),
+            alert_data={"pattern_type": "SANDWICH_ATTACK"},
+        ),
+        DecisionRecord(
+            decision_id="other",
+            alert_id="a3",
+            address="0xother",
+            risk_level="LOW",
+            action="OBSERVE",
+            confidence=0.5,
+            risk_score=20.0,
+            rationale="r3",
+            evidence_refs=[],
+            recommendations=[],
+            limitations=[],
+            rule_version="v1.0.0",
+            decided_at=datetime(2026, 3, 1, 14, 0, 0),
+            alert_data={"pattern_type": "UNKNOWN"},
+        ),
+    ]
+    for record in records:
+        db_session.add(record)
+    db_session.commit()
+
+    response = test_client.get("/api/v1/addresses/0xprofile/profile?recent_limit=1")
+    assert response.status_code == 200
+    data = response.json()
+
+    assert data["address"] == "0xprofile"
+    assert data["total_decisions"] == 2
+    assert data["avg_risk_score"] == 71.5
+    assert data["action_counts"]["FREEZE"] == 1
+    assert data["action_counts"]["WARN"] == 1
+    assert data["pattern_type_counts"]["WASH_TRADING"] == 1
+    assert data["pattern_type_counts"]["SANDWICH_ATTACK"] == 1
+    assert len(data["recent_decisions"]) == 1
+    assert data["recent_decisions"][0]["decision_id"] == "p2"
+
+
+def test_get_address_profile_not_found(test_client: TestClient) -> None:
+    """Test 404 for unknown address profile."""
+    response = test_client.get("/api/v1/addresses/0xmissing/profile")
+    assert response.status_code == 404
+    assert "no decisions found" in response.json()["detail"].lower()

@@ -203,6 +203,12 @@ streamlit run dashboard/app.py
 
 Open the dashboard at `http://localhost:8501`.
 
+MVP pages:
+- Recent Decisions
+- Evaluate Alert
+- Rules Management
+- Address Profile (aggregated history, risk/action distributions, recent decisions)
+
 If your API is not running on `http://localhost:8000`, set:
 
 ```bash

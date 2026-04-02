@@ -14,6 +14,7 @@ Design Philosophy:
 """
 
 import time
+from collections import Counter
 from typing import Optional
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Response
@@ -25,7 +26,7 @@ from risklens.db.models import DecisionRecord
 from risklens.db.session import get_db
 from risklens.engine.decision import DecisionEngine
 from risklens.engine.rule_store import get_rule_store
-from risklens.models import Alert, Decision, RuleDefinition
+from risklens.models import AddressProfile, Alert, Decision, RuleDefinition
 from risklens.observability.metrics import (
     DECISIONS_TOTAL,
     EVALUATE_LATENCY_SECONDS,
@@ -44,6 +45,25 @@ app = FastAPI(
 
 # Initialize decision engine (singleton)
 decision_engine = DecisionEngine()
+
+
+def _record_to_decision(record: DecisionRecord) -> Decision:
+    """Convert a database decision record to API response model."""
+    return Decision(
+        decision_id=record.decision_id,
+        alert_id=record.alert_id,
+        address=record.address,
+        risk_level=record.risk_level,
+        action=record.action,
+        confidence=record.confidence,
+        risk_score=record.risk_score,
+        rationale=record.rationale,
+        evidence_refs=record.evidence_refs,
+        recommendations=record.recommendations,
+        limitations=record.limitations,
+        rule_version=record.rule_version,
+        decided_at=record.decided_at,
+    )
 
 
 @app.get("/health")
@@ -155,21 +175,7 @@ async def get_decision(
         raise HTTPException(status_code=404, detail=f"Decision {decision_id} not found")
 
     # Reconstruct Decision object from database record
-    return Decision(
-        decision_id=record.decision_id,
-        alert_id=record.alert_id,
-        address=record.address,
-        risk_level=record.risk_level,
-        action=record.action,
-        confidence=record.confidence,
-        risk_score=record.risk_score,
-        rationale=record.rationale,
-        evidence_refs=record.evidence_refs,
-        recommendations=record.recommendations,
-        limitations=record.limitations,
-        rule_version=record.rule_version,
-        decided_at=record.decided_at,
-    )
+    return _record_to_decision(record)
 
 
 @app.get("/api/v1/decisions", response_model=list[Decision])
@@ -215,27 +221,62 @@ async def list_decisions(
     records = query.offset(offset).limit(limit).all()
 
     # Convert to Decision objects
-    decisions = []
-    for record in records:
-        decisions.append(
-            Decision(
-                decision_id=record.decision_id,
-                alert_id=record.alert_id,
-                address=record.address,
-                risk_level=record.risk_level,
-                action=record.action,
-                confidence=record.confidence,
-                risk_score=record.risk_score,
-                rationale=record.rationale,
-                evidence_refs=record.evidence_refs,
-                recommendations=record.recommendations,
-                limitations=record.limitations,
-                rule_version=record.rule_version,
-                decided_at=record.decided_at,
-            )
-        )
+    return [_record_to_decision(record) for record in records]
 
-    return decisions
+
+@app.get("/api/v1/addresses/{address}/profile", response_model=AddressProfile)
+async def get_address_profile(
+    address: str,
+    recent_limit: int = Query(
+        20, ge=1, le=200, description="Number of recent decisions to include"
+    ),
+    db: Session = Depends(get_db),
+) -> AddressProfile:
+    """Build a lightweight profile summary for a single address."""
+    records = (
+        db.query(DecisionRecord)
+        .filter(DecisionRecord.address == address)
+        .order_by(DecisionRecord.decided_at.desc())
+        .all()
+    )
+
+    if not records:
+        raise HTTPException(status_code=404, detail=f"No decisions found for address {address}")
+
+    action_counts: Counter[str] = Counter()
+    risk_level_counts: Counter[str] = Counter()
+    pattern_type_counts: Counter[str] = Counter()
+
+    total_score = 0.0
+    for record in records:
+        action_counts[record.action] += 1
+        risk_level_counts[record.risk_level] += 1
+        total_score += record.risk_score
+
+        pattern_type = "UNKNOWN"
+        if isinstance(record.alert_data, dict):
+            raw_pattern = record.alert_data.get("pattern_type")
+            if isinstance(raw_pattern, str) and raw_pattern:
+                pattern_type = raw_pattern
+        pattern_type_counts[pattern_type] += 1
+
+    recent_records = records[:recent_limit]
+
+    # Records are sorted desc; first item is latest and last is earliest.
+    latest_decided_at = records[0].decided_at
+    first_decided_at = records[-1].decided_at
+
+    return AddressProfile(
+        address=address,
+        total_decisions=len(records),
+        avg_risk_score=round(total_score / len(records), 2),
+        first_decided_at=first_decided_at,
+        latest_decided_at=latest_decided_at,
+        action_counts=dict(action_counts),
+        risk_level_counts=dict(risk_level_counts),
+        pattern_type_counts=dict(pattern_type_counts),
+        recent_decisions=[_record_to_decision(record) for record in recent_records],
+    )
 
 
 # Rules Management Endpoints
