@@ -60,6 +60,7 @@ RiskLens Platform is a complete risk management system for Web3 organizations, b
 - Define risk rules in Python DSL (no code deployment needed)
 - Multi-dimensional risk scoring (detection score + address reputation + transaction characteristics)
 - Automated decision logic: OBSERVE / WARN / FREEZE / ESCALATE
+- Runtime rule updates immediately affect new `/api/v1/evaluate` decisions
 
 ### ✅ Real-time Monitoring
 - Kafka/Redis-based event streaming
@@ -314,7 +315,7 @@ curl -X POST http://localhost:8000/api/v1/evaluate \
 ### Phase 3: Operator Dashboard 🚧 (In Progress)
 - [x] Streamlit operator dashboard (MVP)
 - [ ] Alert management UI (advanced filters, triage workflow)
-- [ ] Address profiling
+- [x] Address profiling (API + dashboard page)
 - [x] Rule management interface (via API + dashboard)
 - [x] Metrics dashboard (Prometheus + Grafana)
 
@@ -356,6 +357,7 @@ curl -X DELETE http://localhost:8000/api/v1/rules/custom_high_risk
 
 **Benefits**:
 - No code deployment needed to adjust rules
+- Changes apply to subsequent evaluations immediately
 - A/B test different rule configurations
 - Quick response to new attack patterns
 - Audit trail of rule changes
@@ -447,9 +449,9 @@ Historical planning docs are archived in `docs/archive/`:
 - `docs/archive/ROADMAP.md`
 
 **Next Milestones**:
-- Address profiling (API + dashboard page)
 - Alert management workflow (triage + filtering)
 - Slack alert integration + runbooks
+- Rule change governance (versioning + approval/audit workflow)
 
 ---
 

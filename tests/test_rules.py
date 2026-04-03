@@ -283,6 +283,37 @@ def test_rule_evaluator_in_operator() -> None:
     assert action == ActionType.WARN
 
 
+def test_rule_evaluator_accepts_text_operator_aliases() -> None:
+    """Support operator aliases like gte/lte for API compatibility."""
+    rules = [
+        RuleDefinition(
+            name="Alias Operator Rule",
+            description="Uses gte alias",
+            pattern_types=[PatternType.WASH_TRADING],
+            conditions={"score": {"gte": 0.8}},
+            action=ActionType.WARN,
+            priority=10,
+        )
+    ]
+    evaluator = RuleEvaluator(rules)
+
+    matched_alert = Alert(
+        address="0xtest",
+        pattern_type=PatternType.WASH_TRADING,
+        score=0.8,
+        time_window_sec=300,
+    )
+    not_matched_alert = Alert(
+        address="0xtest",
+        pattern_type=PatternType.WASH_TRADING,
+        score=0.7,
+        time_window_sec=300,
+    )
+
+    assert evaluator.evaluate(matched_alert) == ActionType.WARN
+    assert evaluator.evaluate(not_matched_alert) is None
+
+
 def test_rule_evaluator_between_operator() -> None:
     """Test 'between' operator for range checks."""
     rules = [
