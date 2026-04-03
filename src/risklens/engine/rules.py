@@ -124,7 +124,17 @@ class RuleEvaluator:
         if value is None:
             return False
 
-        for operator, expected in condition_spec.items():
+        operator_aliases = {
+            "gt": ">",
+            "lt": "<",
+            "gte": ">=",
+            "lte": "<=",
+            "eq": "==",
+            "ne": "!=",
+        }
+
+        for raw_operator, expected in condition_spec.items():
+            operator = operator_aliases.get(raw_operator, raw_operator)
             if operator == ">":
                 if not (value > expected):
                     return False

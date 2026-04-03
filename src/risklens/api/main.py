@@ -26,6 +26,7 @@ from risklens.db.models import DecisionRecord
 from risklens.db.session import get_db
 from risklens.engine.decision import DecisionEngine
 from risklens.engine.rule_store import get_rule_store
+from risklens.engine.rules import RuleEvaluator
 from risklens.models import AddressProfile, Alert, Decision, RuleDefinition
 from risklens.observability.metrics import (
     DECISIONS_TOTAL,
@@ -63,6 +64,22 @@ def _record_to_decision(record: DecisionRecord) -> Decision:
         limitations=record.limitations,
         rule_version=record.rule_version,
         decided_at=record.decided_at,
+    )
+
+
+def _build_runtime_decision_engine() -> DecisionEngine:
+    """Build a decision engine that reflects currently enabled runtime rules.
+
+    If no runtime rules are configured, fall back to the default engine.
+    """
+    runtime_rules = get_rule_store().list_all(enabled_only=True)
+    if not runtime_rules:
+        return decision_engine
+
+    return DecisionEngine(
+        rule_evaluator=RuleEvaluator(runtime_rules),
+        risk_scorer=decision_engine.risk_scorer,
+        rule_version="runtime",
     )
 
 
@@ -106,8 +123,8 @@ async def evaluate_alert(
     """
     start = time.perf_counter()
     try:
-        # Evaluate alert using decision engine
-        decision = decision_engine.evaluate_alert(alert)
+        # Evaluate alert using currently enabled runtime rules (if any)
+        decision = _build_runtime_decision_engine().evaluate_alert(alert)
 
         # Store decision in database for audit trail
         record = DecisionRecord(

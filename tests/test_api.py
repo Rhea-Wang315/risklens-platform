@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from risklens.api.main import app
 from risklens.db.models import DecisionRecord
 from risklens.db.session import SessionLocal, drop_db, get_db, init_db
+from risklens.engine.rule_store import get_rule_store
 
 
 @pytest.fixture(scope="function")
@@ -40,6 +41,15 @@ def test_client(db_session: Session):
     client = TestClient(app)
     yield client
     app.dependency_overrides.clear()
+
+
+@pytest.fixture(autouse=True)
+def clear_runtime_rules():
+    """Keep runtime rule store isolated between tests."""
+    rule_store = get_rule_store()
+    rule_store.clear()
+    yield
+    rule_store.clear()
 
 
 def test_health_check(test_client: TestClient) -> None:
@@ -143,6 +153,45 @@ def test_evaluate_alert_low_risk(test_client: TestClient, db_session: Session) -
     data = response.json()
     assert data["action"] == "OBSERVE"
     assert data["risk_level"] in ["LOW", "MEDIUM"]
+
+
+def test_evaluate_alert_uses_runtime_rules(test_client: TestClient) -> None:
+    """Custom runtime rules should affect subsequent evaluations."""
+    create_rule_response = test_client.post(
+        "/api/v1/rules",
+        json={
+            "rule_id": "runtime_force_observe",
+            "name": "Runtime Force Observe",
+            "description": "Force OBSERVE for high-score wash trading during investigations",
+            "pattern_types": ["WASH_TRADING"],
+            "conditions": {"score": {">=": 0.9}},
+            "action": "OBSERVE",
+            "priority": 999,
+            "enabled": True,
+        },
+    )
+    assert create_rule_response.status_code == 201
+
+    response = test_client.post(
+        "/api/v1/evaluate",
+        json={
+            "address": "0xruntime",
+            "time_window_sec": 300,
+            "pattern_type": "WASH_TRADING",
+            "score": 0.95,
+            "features": {
+                "counterparty_diversity": 1,
+                "total_volume_usd": 500000,
+                "roundtrip_count": 30,
+                "self_trade_ratio": 0.98,
+            },
+        },
+    )
+
+    assert response.status_code == 201
+    data = response.json()
+    assert data["action"] == "OBSERVE"
+    assert data["rule_version"] == "runtime"
 
 
 def test_get_decision_success(test_client: TestClient, db_session: Session) -> None:
