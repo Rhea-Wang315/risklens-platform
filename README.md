@@ -209,6 +209,7 @@ MVP pages:
 - Evaluate Alert
 - Rules Management
 - Address Profile (aggregated history, risk/action distributions, recent decisions)
+- Triage Queue (status transitions, assignee, notes)
 
 If your API is not running on `http://localhost:8000`, set:
 
@@ -314,7 +315,8 @@ curl -X POST http://localhost:8000/api/v1/evaluate \
 - [ ] K8s deployment manifests
 ### Phase 3: Operator Dashboard 🚧 (In Progress)
 - [x] Streamlit operator dashboard (MVP)
-- [ ] Alert management UI (advanced filters, triage workflow)
+- [x] Alert triage workflow (status/assignee/notes update)
+- [ ] Alert management UI (advanced filters, bulk actions)
 - [x] Address profiling (API + dashboard page)
 - [x] Rule management interface (via API + dashboard)
 - [x] Metrics dashboard (Prometheus + Grafana)
@@ -449,7 +451,7 @@ Historical planning docs are archived in `docs/archive/`:
 - `docs/archive/ROADMAP.md`
 
 **Next Milestones**:
-- Alert management workflow (triage + filtering)
+- Alert management UI hardening (advanced filters + bulk triage)
 - Slack alert integration + runbooks
 - Rule change governance (versioning + approval/audit workflow)
 

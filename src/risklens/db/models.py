@@ -44,6 +44,10 @@ class DecisionRecord(Base):
     # Metadata
     rule_version = Column(String(20), nullable=False)  # Version of rules used
     decided_at = Column(DateTime, nullable=False, default=datetime.utcnow, index=True)
+    decision_status = Column(String(20), nullable=False, default="OPEN", index=True)
+    triage_assignee = Column(String(255), nullable=True, index=True)
+    triage_notes = Column(Text, nullable=True)
+    triage_updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, index=True)
 
     # Full alert data for audit (stored as JSON)
     alert_data = Column(JSON, nullable=False)
@@ -63,3 +67,6 @@ class DecisionRecord(Base):
 Index("idx_address_decided_at", DecisionRecord.address, DecisionRecord.decided_at)
 Index("idx_risk_level_action", DecisionRecord.risk_level, DecisionRecord.action)
 Index("idx_decided_at_action", DecisionRecord.decided_at, DecisionRecord.action)
+Index(
+    "idx_decision_status_updated", DecisionRecord.decision_status, DecisionRecord.triage_updated_at
+)

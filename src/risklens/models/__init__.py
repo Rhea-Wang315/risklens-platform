@@ -37,6 +37,15 @@ class ActionType(str, Enum):
     ESCALATE = "ESCALATE"  # Escalate to compliance/legal
 
 
+class DecisionStatus(str, Enum):
+    """Triage status for operator workflow."""
+
+    OPEN = "OPEN"
+    IN_REVIEW = "IN_REVIEW"
+    RESOLVED = "RESOLVED"
+    FALSE_POSITIVE = "FALSE_POSITIVE"
+
+
 class Alert(BaseModel):
     """Input alert from detection engine (e.g., whale-sentry)."""
 
@@ -104,6 +113,16 @@ class Decision(BaseModel):
     )
     rule_version: str = Field(..., description="Version of rules used")
     decided_at: datetime = Field(default_factory=datetime.utcnow)
+    decision_status: DecisionStatus = Field(
+        default=DecisionStatus.OPEN, description="Operator triage status"
+    )
+    triage_assignee: Optional[str] = Field(
+        default=None, description="Operator assigned to this decision"
+    )
+    triage_notes: Optional[str] = Field(default=None, description="Latest triage notes")
+    triage_updated_at: datetime = Field(
+        default_factory=datetime.utcnow, description="Timestamp of latest triage update"
+    )
 
     class Config:
         json_schema_extra = {
@@ -130,6 +149,9 @@ class Decision(BaseModel):
                     "Does not check cross-chain activity",
                 ],
                 "rule_version": "v1.0.0",
+                "decision_status": "OPEN",
+                "triage_assignee": "rhea",
+                "triage_notes": "Escalated to compliance for same-day review",
             }
         }
 
@@ -187,3 +209,11 @@ class AddressProfile(BaseModel):
     recent_decisions: list[Decision] = Field(
         default_factory=list, description="Most recent decisions for this address"
     )
+
+
+class DecisionTriageUpdate(BaseModel):
+    """Payload for triage updates on existing decisions."""
+
+    decision_status: DecisionStatus = Field(..., description="Updated triage status")
+    triage_assignee: Optional[str] = Field(default=None, description="Assigned operator")
+    triage_notes: Optional[str] = Field(default=None, description="Triage notes")
