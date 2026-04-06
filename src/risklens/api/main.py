@@ -15,6 +15,7 @@ Design Philosophy:
 
 import time
 from collections import Counter
+from datetime import datetime
 from typing import Optional
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Response
@@ -27,7 +28,14 @@ from risklens.db.session import get_db
 from risklens.engine.decision import DecisionEngine
 from risklens.engine.rule_store import get_rule_store
 from risklens.engine.rules import RuleEvaluator
-from risklens.models import AddressProfile, Alert, Decision, RuleDefinition
+from risklens.models import (
+    AddressProfile,
+    Alert,
+    Decision,
+    DecisionStatus,
+    DecisionTriageUpdate,
+    RuleDefinition,
+)
 from risklens.observability.metrics import (
     DECISIONS_TOTAL,
     EVALUATE_LATENCY_SECONDS,
@@ -64,6 +72,10 @@ def _record_to_decision(record: DecisionRecord) -> Decision:
         limitations=record.limitations,
         rule_version=record.rule_version,
         decided_at=record.decided_at,
+        decision_status=record.decision_status or DecisionStatus.OPEN,
+        triage_assignee=record.triage_assignee,
+        triage_notes=record.triage_notes,
+        triage_updated_at=record.triage_updated_at or record.decided_at,
     )
 
 
@@ -141,6 +153,10 @@ async def evaluate_alert(
             limitations=decision.limitations,
             rule_version=decision.rule_version,
             decided_at=decision.decided_at,
+            decision_status=DecisionStatus.OPEN.value,
+            triage_assignee=None,
+            triage_notes=None,
+            triage_updated_at=decision.decided_at,
             alert_data=alert.model_dump(mode="json"),
         )
 
@@ -204,6 +220,10 @@ async def list_decisions(
     action: Optional[str] = Query(
         None, description="Filter by action (OBSERVE/WARN/FREEZE/ESCALATE)"
     ),
+    decision_status: Optional[str] = Query(
+        None, description="Filter by triage status (OPEN/IN_REVIEW/RESOLVED/FALSE_POSITIVE)"
+    ),
+    triage_assignee: Optional[str] = Query(None, description="Filter by triage assignee"),
     limit: int = Query(100, ge=1, le=1000, description="Maximum number of results"),
     offset: int = Query(0, ge=0, description="Number of results to skip"),
     db: Session = Depends(get_db),
@@ -230,6 +250,10 @@ async def list_decisions(
         query = query.filter(DecisionRecord.risk_level == risk_level.upper())
     if action:
         query = query.filter(DecisionRecord.action == action.upper())
+    if decision_status:
+        query = query.filter(DecisionRecord.decision_status == decision_status.upper())
+    if triage_assignee:
+        query = query.filter(DecisionRecord.triage_assignee == triage_assignee)
 
     # Order by decided_at descending (most recent first)
     query = query.order_by(DecisionRecord.decided_at.desc())
@@ -239,6 +263,28 @@ async def list_decisions(
 
     # Convert to Decision objects
     return [_record_to_decision(record) for record in records]
+
+
+@app.patch("/api/v1/decisions/{decision_id}/triage", response_model=Decision)
+async def update_decision_triage(
+    decision_id: str,
+    triage: DecisionTriageUpdate,
+    db: Session = Depends(get_db),
+) -> Decision:
+    """Update triage metadata for an existing decision."""
+    record = db.query(DecisionRecord).filter(DecisionRecord.decision_id == decision_id).first()
+    if not record:
+        raise HTTPException(status_code=404, detail=f"Decision {decision_id} not found")
+
+    record.decision_status = triage.decision_status.value
+    record.triage_assignee = triage.triage_assignee
+    record.triage_notes = triage.triage_notes
+    record.triage_updated_at = datetime.utcnow()
+
+    db.add(record)
+    db.commit()
+    db.refresh(record)
+    return _record_to_decision(record)
 
 
 @app.get("/api/v1/addresses/{address}/profile", response_model=AddressProfile)

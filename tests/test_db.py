@@ -317,3 +317,42 @@ def test_composite_index_query(db_session: Session) -> None:
     )
 
     assert len(results) == 2  # 12:01, 12:02
+
+
+def test_triage_fields_persist_and_update(db_session: Session) -> None:
+    """Test triage field defaults and updates."""
+    decision = DecisionRecord(
+        decision_id="test_dec_triage",
+        alert_id="test_alert_triage",
+        address="0xtriage",
+        risk_level="HIGH",
+        action="FREEZE",
+        confidence=0.9,
+        risk_score=88.0,
+        rationale="Needs review",
+        evidence_refs=[],
+        recommendations=[],
+        limitations=[],
+        rule_version="v1.0.0",
+        alert_data={},
+    )
+    db_session.add(decision)
+    db_session.commit()
+
+    retrieved = db_session.query(DecisionRecord).filter_by(decision_id="test_dec_triage").first()
+    assert retrieved is not None
+    assert retrieved.decision_status == "OPEN"
+    assert retrieved.triage_assignee is None
+    assert retrieved.triage_notes is None
+    assert retrieved.triage_updated_at is not None
+
+    retrieved.decision_status = "IN_REVIEW"
+    retrieved.triage_assignee = "alice"
+    retrieved.triage_notes = "Investigating"
+    db_session.commit()
+
+    updated = db_session.query(DecisionRecord).filter_by(decision_id="test_dec_triage").first()
+    assert updated is not None
+    assert updated.decision_status == "IN_REVIEW"
+    assert updated.triage_assignee == "alice"
+    assert updated.triage_notes == "Investigating"

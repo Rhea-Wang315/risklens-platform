@@ -101,6 +101,10 @@ def test_evaluate_alert_success(test_client: TestClient, db_session: Session) ->
     assert len(data["evidence_refs"]) > 0
     assert len(data["recommendations"]) > 0
     assert data["rule_version"] == "v1.0.0"
+    assert data["decision_status"] == "OPEN"
+    assert data["triage_assignee"] is None
+    assert data["triage_notes"] is None
+    assert "triage_updated_at" in data
 
     # Verify database record was created
     decision_id = data["decision_id"]
@@ -324,6 +328,69 @@ def test_list_decisions_filter_by_action(test_client: TestClient, db_session: Se
         assert decision["action"] == "FREEZE"
 
 
+def test_list_decisions_filter_by_status_and_assignee(
+    test_client: TestClient, db_session: Session
+) -> None:
+    """Test filtering decisions by triage status and assignee."""
+    records = [
+        DecisionRecord(
+            decision_id="t1",
+            alert_id="a1",
+            address="0xtriage",
+            risk_level="HIGH",
+            action="FREEZE",
+            confidence=0.9,
+            risk_score=88.0,
+            rationale="r1",
+            evidence_refs=[],
+            recommendations=[],
+            limitations=[],
+            rule_version="v1.0.0",
+            decision_status="IN_REVIEW",
+            triage_assignee="alice",
+            triage_notes="checking source of funds",
+            decided_at=datetime(2026, 4, 1, 10, 0, 0),
+            triage_updated_at=datetime(2026, 4, 1, 11, 0, 0),
+            alert_data={},
+        ),
+        DecisionRecord(
+            decision_id="t2",
+            alert_id="a2",
+            address="0xtriage",
+            risk_level="MEDIUM",
+            action="WARN",
+            confidence=0.7,
+            risk_score=60.0,
+            rationale="r2",
+            evidence_refs=[],
+            recommendations=[],
+            limitations=[],
+            rule_version="v1.0.0",
+            decision_status="RESOLVED",
+            triage_assignee="bob",
+            triage_notes="resolved as expected bot behavior",
+            decided_at=datetime(2026, 4, 1, 9, 0, 0),
+            triage_updated_at=datetime(2026, 4, 1, 12, 0, 0),
+            alert_data={},
+        ),
+    ]
+    for record in records:
+        db_session.add(record)
+    db_session.commit()
+
+    status_response = test_client.get("/api/v1/decisions?decision_status=IN_REVIEW")
+    assert status_response.status_code == 200
+    status_data = status_response.json()
+    assert len(status_data) == 1
+    assert status_data[0]["decision_id"] == "t1"
+
+    assignee_response = test_client.get("/api/v1/decisions?triage_assignee=alice")
+    assert assignee_response.status_code == 200
+    assignee_data = assignee_response.json()
+    assert len(assignee_data) == 1
+    assert assignee_data[0]["decision_id"] == "t1"
+
+
 def test_list_decisions_pagination(test_client: TestClient, db_session: Session) -> None:
     """Test pagination of decision list."""
     # Create 10 decisions
@@ -353,6 +420,48 @@ def test_list_decisions_pagination(test_client: TestClient, db_session: Session)
     ids1 = {d["decision_id"] for d in data1}
     ids2 = {d["decision_id"] for d in data2}
     assert len(ids1.intersection(ids2)) == 0
+
+
+def test_update_decision_triage_success(test_client: TestClient) -> None:
+    """Test triage updates for an existing decision."""
+    create_response = test_client.post(
+        "/api/v1/evaluate",
+        json={
+            "address": "0xtriage_update",
+            "time_window_sec": 300,
+            "pattern_type": "WASH_TRADING",
+            "score": 0.9,
+            "features": {"counterparty_diversity": 2, "total_volume_usd": 120000},
+        },
+    )
+    assert create_response.status_code == 201
+    decision_id = create_response.json()["decision_id"]
+
+    update_response = test_client.patch(
+        f"/api/v1/decisions/{decision_id}/triage",
+        json={
+            "decision_status": "IN_REVIEW",
+            "triage_assignee": "rhea",
+            "triage_notes": "Escalated for compliance review",
+        },
+    )
+    assert update_response.status_code == 200
+    updated = update_response.json()
+    assert updated["decision_id"] == decision_id
+    assert updated["decision_status"] == "IN_REVIEW"
+    assert updated["triage_assignee"] == "rhea"
+    assert updated["triage_notes"] == "Escalated for compliance review"
+    assert "triage_updated_at" in updated
+
+
+def test_update_decision_triage_not_found(test_client: TestClient) -> None:
+    """Test triage update on unknown decision."""
+    response = test_client.patch(
+        "/api/v1/decisions/nonexistent/triage",
+        json={"decision_status": "IN_REVIEW"},
+    )
+    assert response.status_code == 404
+    assert "not found" in response.json()["detail"].lower()
 
 
 def test_evaluate_alert_invalid_pattern_type(test_client: TestClient) -> None:
