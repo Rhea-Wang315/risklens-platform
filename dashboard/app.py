@@ -97,6 +97,13 @@ def _api_put(base_url: str, path: str, payload: dict[str, Any]) -> Any:
         return resp.json()
 
 
+def _api_patch(base_url: str, path: str, payload: dict[str, Any]) -> Any:
+    with _client() as client:
+        resp = client.patch(f"{base_url}{path}", json=payload)
+        resp.raise_for_status()
+        return resp.json()
+
+
 def _api_delete(base_url: str, path: str) -> None:
     with _client() as client:
         resp = client.delete(f"{base_url}{path}")
@@ -451,6 +458,93 @@ def _page_address_profile(base_url: str) -> None:
         st.info("No recent decisions available.")
 
 
+def _page_triage(base_url: str) -> None:
+    st.header("Triage Queue")
+    st.caption("Review open decisions, assign owners, and update triage status")
+
+    with st.sidebar:
+        st.subheader("Triage Filters")
+        status = st.selectbox(
+            "Status",
+            options=["", "OPEN", "IN_REVIEW", "RESOLVED", "FALSE_POSITIVE"],
+        )
+        assignee = st.text_input("Assignee", value="")
+        limit = st.number_input("Limit", min_value=1, max_value=500, value=50, step=10)
+        refresh = st.button("Refresh Triage")
+
+    params: dict[str, Any] = {"limit": int(limit), "offset": 0}
+    if status:
+        params["decision_status"] = status
+    if assignee.strip():
+        params["triage_assignee"] = assignee.strip()
+
+    if refresh:
+        st.cache_data.clear()
+
+    @st.cache_data(ttl=2)
+    def _fetch_triage_items(_base_url: str, _params: dict[str, Any]) -> list[dict[str, Any]]:
+        data = _api_get(_base_url, "/api/v1/decisions", params=_params)
+        if not isinstance(data, list):
+            raise ValueError("/api/v1/decisions must return a list")
+        return data
+
+    try:
+        decisions = _fetch_triage_items(base_url, params)
+    except Exception as e:
+        st.error("Failed to load triage queue")
+        st.caption(str(e))
+        return
+
+    st.caption(f"Returned {len(decisions)} decisions")
+    if not decisions:
+        st.info("No decisions found for current filters.")
+        return
+
+    st.dataframe(decisions, use_container_width=True)
+
+    decision_options = [d.get("decision_id", "") for d in decisions if isinstance(d, dict)]
+    selected_decision_id = st.selectbox("Select decision_id", options=decision_options)
+    selected = next((d for d in decisions if d.get("decision_id") == selected_decision_id), None)
+    if not isinstance(selected, dict):
+        return
+
+    default_status = str(selected.get("decision_status", "OPEN"))
+    status_options = ["OPEN", "IN_REVIEW", "RESOLVED", "FALSE_POSITIVE"]
+    default_idx = status_options.index(default_status) if default_status in status_options else 0
+
+    with st.form("triage_update_form"):
+        new_status = st.selectbox("New Status", options=status_options, index=default_idx)
+        new_assignee = st.text_input("Assignee", value=str(selected.get("triage_assignee") or ""))
+        new_notes = st.text_area("Notes", value=str(selected.get("triage_notes") or ""), height=120)
+        submitted = st.form_submit_button("Update Triage", type="primary")
+
+    if not submitted:
+        return
+
+    try:
+        updated = _api_patch(
+            base_url,
+            f"/api/v1/decisions/{selected_decision_id}/triage",
+            payload={
+                "decision_status": new_status,
+                "triage_assignee": new_assignee.strip() or None,
+                "triage_notes": new_notes.strip() or None,
+            },
+        )
+        st.success("Triage updated")
+        st.json(updated)
+        st.cache_data.clear()
+    except httpx.HTTPStatusError as e:
+        st.error("API returned an error")
+        try:
+            st.json(e.response.json())
+        except Exception:
+            st.text(e.response.text)
+    except Exception as e:
+        st.error("Failed to update triage")
+        st.caption(str(e))
+
+
 def main() -> None:
     st.set_page_config(page_title="RiskLens Dashboard", layout="wide")
     st.title("RiskLens Operator Dashboard")
@@ -469,7 +563,7 @@ def main() -> None:
         st.divider()
         page = st.radio(
             "Page",
-            options=["Recent Decisions", "Evaluate Alert", "Rules", "Address Profile"],
+            options=["Recent Decisions", "Evaluate Alert", "Rules", "Address Profile", "Triage"],
             index=0,
         )
 
@@ -492,8 +586,10 @@ def main() -> None:
         _page_evaluate_alert(base_url)
     elif page == "Rules":
         _page_rules(base_url)
-    else:
+    elif page == "Address Profile":
         _page_address_profile(base_url)
+    else:
+        _page_triage(base_url)
 
 
 if __name__ == "__main__":
