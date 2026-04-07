@@ -464,6 +464,57 @@ def test_update_decision_triage_not_found(test_client: TestClient) -> None:
     assert "not found" in response.json()["detail"].lower()
 
 
+def test_update_decisions_triage_batch_success(test_client: TestClient) -> None:
+    """Test batch triage updates across multiple decisions."""
+    decision_ids: list[str] = []
+    for i in range(3):
+        create_response = test_client.post(
+            "/api/v1/evaluate",
+            json={
+                "address": f"0xbatch{i}",
+                "time_window_sec": 300,
+                "pattern_type": "WASH_TRADING",
+                "score": 0.8,
+                "features": {"counterparty_diversity": 3, "total_volume_usd": 90000},
+            },
+        )
+        assert create_response.status_code == 201
+        decision_ids.append(create_response.json()["decision_id"])
+
+    response = test_client.patch(
+        "/api/v1/decisions/triage/batch",
+        json={
+            "decision_ids": decision_ids + ["missing_decision_id"],
+            "decision_status": "RESOLVED",
+            "triage_assignee": "batch_owner",
+            "triage_notes": "Bulk close after investigation",
+        },
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["updated_count"] == 3
+    assert len(data["updated_decision_ids"]) == 3
+    assert data["not_found_ids"] == ["missing_decision_id"]
+
+    verify_response = test_client.get("/api/v1/decisions?triage_assignee=batch_owner")
+    assert verify_response.status_code == 200
+    updated_rows = verify_response.json()
+    assert len(updated_rows) == 3
+    assert all(row["decision_status"] == "RESOLVED" for row in updated_rows)
+
+
+def test_update_decisions_triage_batch_empty_ids(test_client: TestClient) -> None:
+    """Test validation for empty batch decision list."""
+    response = test_client.patch(
+        "/api/v1/decisions/triage/batch",
+        json={
+            "decision_ids": [],
+            "decision_status": "IN_REVIEW",
+        },
+    )
+    assert response.status_code == 422
+
+
 def test_evaluate_alert_invalid_pattern_type(test_client: TestClient) -> None:
     """Test validation error for invalid pattern type."""
     alert_data = {

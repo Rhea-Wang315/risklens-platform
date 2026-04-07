@@ -33,6 +33,8 @@ from risklens.models import (
     Alert,
     Decision,
     DecisionStatus,
+    DecisionTriageBatchResult,
+    DecisionTriageBatchUpdate,
     DecisionTriageUpdate,
     RuleDefinition,
 )
@@ -285,6 +287,39 @@ async def update_decision_triage(
     db.commit()
     db.refresh(record)
     return _record_to_decision(record)
+
+
+@app.patch("/api/v1/decisions/triage/batch", response_model=DecisionTriageBatchResult)
+async def update_decisions_triage_batch(
+    triage: DecisionTriageBatchUpdate,
+    db: Session = Depends(get_db),
+) -> DecisionTriageBatchResult:
+    """Update triage metadata for multiple decisions."""
+    records = (
+        db.query(DecisionRecord).filter(DecisionRecord.decision_id.in_(triage.decision_ids)).all()
+    )
+
+    found_ids = {record.decision_id for record in records}
+    not_found_ids = [
+        decision_id for decision_id in triage.decision_ids if decision_id not in found_ids
+    ]
+
+    now = datetime.utcnow()
+    for record in records:
+        record.decision_status = triage.decision_status.value
+        record.triage_assignee = triage.triage_assignee
+        record.triage_notes = triage.triage_notes
+        record.triage_updated_at = now
+        db.add(record)
+
+    db.commit()
+
+    updated_decision_ids = [record.decision_id for record in records]
+    return DecisionTriageBatchResult(
+        updated_count=len(updated_decision_ids),
+        not_found_ids=not_found_ids,
+        updated_decision_ids=updated_decision_ids,
+    )
 
 
 @app.get("/api/v1/addresses/{address}/profile", response_model=AddressProfile)

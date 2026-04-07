@@ -217,3 +217,22 @@ class DecisionTriageUpdate(BaseModel):
     decision_status: DecisionStatus = Field(..., description="Updated triage status")
     triage_assignee: Optional[str] = Field(default=None, description="Assigned operator")
     triage_notes: Optional[str] = Field(default=None, description="Triage notes")
+
+
+class DecisionTriageBatchUpdate(BaseModel):
+    """Payload for batch triage updates."""
+
+    decision_ids: list[str] = Field(
+        ..., min_length=1, description="Decision IDs to update in batch"
+    )
+    decision_status: DecisionStatus = Field(..., description="Updated triage status")
+    triage_assignee: Optional[str] = Field(default=None, description="Assigned operator")
+    triage_notes: Optional[str] = Field(default=None, description="Triage notes")
+
+
+class DecisionTriageBatchResult(BaseModel):
+    """Response for batch triage updates."""
+
+    updated_count: int = Field(..., ge=0)
+    not_found_ids: list[str] = Field(default_factory=list)
+    updated_decision_ids: list[str] = Field(default_factory=list)
