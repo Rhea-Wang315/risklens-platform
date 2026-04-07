@@ -502,6 +502,55 @@ def _page_triage(base_url: str) -> None:
 
     st.dataframe(decisions, use_container_width=True)
 
+    st.subheader("Batch Update")
+    decision_options = [d.get("decision_id", "") for d in decisions if isinstance(d, dict)]
+    with st.form("triage_batch_update_form"):
+        selected_ids = st.multiselect(
+            "Select decision_ids",
+            options=decision_options,
+            default=decision_options[: min(len(decision_options), 5)],
+        )
+        batch_status = st.selectbox(
+            "Batch Status",
+            options=["OPEN", "IN_REVIEW", "RESOLVED", "FALSE_POSITIVE"],
+            index=1,
+        )
+        batch_assignee = st.text_input("Batch Assignee", value="")
+        batch_notes = st.text_area("Batch Notes", value="", height=100)
+        batch_submit = st.form_submit_button("Apply Batch Update", type="primary")
+
+    if batch_submit:
+        if not selected_ids:
+            st.warning("Select at least one decision for batch update.")
+        else:
+            try:
+                result = _api_patch(
+                    base_url,
+                    "/api/v1/decisions/triage/batch",
+                    payload={
+                        "decision_ids": selected_ids,
+                        "decision_status": batch_status,
+                        "triage_assignee": batch_assignee.strip() or None,
+                        "triage_notes": batch_notes.strip() or None,
+                    },
+                )
+                st.success(f"Batch updated {result.get('updated_count', 0)} decisions")
+                if result.get("not_found_ids"):
+                    st.warning(f"Not found: {result.get('not_found_ids')}")
+                st.json(result)
+                st.cache_data.clear()
+            except httpx.HTTPStatusError as e:
+                st.error("API returned an error")
+                try:
+                    st.json(e.response.json())
+                except Exception:
+                    st.text(e.response.text)
+            except Exception as e:
+                st.error("Failed to batch update triage")
+                st.caption(str(e))
+
+    st.divider()
+    st.subheader("Single Decision Update")
     decision_options = [d.get("decision_id", "") for d in decisions if isinstance(d, dict)]
     selected_decision_id = st.selectbox("Select decision_id", options=decision_options)
     selected = next((d for d in decisions if d.get("decision_id") == selected_decision_id), None)

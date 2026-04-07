@@ -209,7 +209,7 @@ MVP pages:
 - Evaluate Alert
 - Rules Management
 - Address Profile (aggregated history, risk/action distributions, recent decisions)
-- Triage Queue (status transitions, assignee, notes)
+- Triage Queue (single + batch status transitions, assignee, notes)
 
 If your API is not running on `http://localhost:8000`, set:
 
@@ -316,6 +316,7 @@ curl -X POST http://localhost:8000/api/v1/evaluate \
 ### Phase 3: Operator Dashboard 🚧 (In Progress)
 - [x] Streamlit operator dashboard (MVP)
 - [x] Alert triage workflow (status/assignee/notes update)
+- [x] Batch triage operations
 - [ ] Alert management UI (advanced filters, bulk actions)
 - [x] Address profiling (API + dashboard page)
 - [x] Rule management interface (via API + dashboard)
@@ -451,7 +452,7 @@ Historical planning docs are archived in `docs/archive/`:
 - `docs/archive/ROADMAP.md`
 
 **Next Milestones**:
-- Alert management UI hardening (advanced filters + bulk triage)
+- Alert management UI hardening (advanced filters + queue prioritization)
 - Slack alert integration + runbooks
 - Rule change governance (versioning + approval/audit workflow)
 
