@@ -515,6 +515,75 @@ def test_update_decisions_triage_batch_empty_ids(test_client: TestClient) -> Non
     assert response.status_code == 422
 
 
+def test_update_decisions_triage_batch_all_not_found(test_client: TestClient) -> None:
+    """Batch triage should return 0 updates when all IDs are missing."""
+    response = test_client.patch(
+        "/api/v1/decisions/triage/batch",
+        json={
+            "decision_ids": ["missing_1", "missing_2"],
+            "decision_status": "IN_REVIEW",
+            "triage_assignee": "nobody",
+            "triage_notes": "should not apply",
+        },
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["updated_count"] == 0
+    assert data["updated_decision_ids"] == []
+    assert data["not_found_ids"] == ["missing_1", "missing_2"]
+
+
+def test_update_decisions_triage_batch_can_clear_assignee_and_notes(
+    test_client: TestClient,
+) -> None:
+    """Batch triage should allow clearing assignee/notes with null values."""
+    decision_ids: list[str] = []
+    for i in range(2):
+        create_response = test_client.post(
+            "/api/v1/evaluate",
+            json={
+                "address": f"0xclear{i}",
+                "time_window_sec": 300,
+                "pattern_type": "WASH_TRADING",
+                "score": 0.85,
+                "features": {"counterparty_diversity": 3, "total_volume_usd": 95000},
+            },
+        )
+        assert create_response.status_code == 201
+        decision_ids.append(create_response.json()["decision_id"])
+
+    seed_response = test_client.patch(
+        "/api/v1/decisions/triage/batch",
+        json={
+            "decision_ids": decision_ids,
+            "decision_status": "IN_REVIEW",
+            "triage_assignee": "temp_owner",
+            "triage_notes": "temporary note",
+        },
+    )
+    assert seed_response.status_code == 200
+    assert seed_response.json()["updated_count"] == 2
+
+    clear_response = test_client.patch(
+        "/api/v1/decisions/triage/batch",
+        json={
+            "decision_ids": decision_ids,
+            "decision_status": "RESOLVED",
+            "triage_assignee": None,
+            "triage_notes": None,
+        },
+    )
+    assert clear_response.status_code == 200
+    assert clear_response.json()["updated_count"] == 2
+
+    verify_response = test_client.get("/api/v1/decisions?decision_status=RESOLVED")
+    assert verify_response.status_code == 200
+    rows = [row for row in verify_response.json() if row["decision_id"] in decision_ids]
+    assert len(rows) == 2
+    assert all(row["triage_assignee"] is None for row in rows)
+    assert all(row["triage_notes"] is None for row in rows)
+
+
 def test_evaluate_alert_invalid_pattern_type(test_client: TestClient) -> None:
     """Test validation error for invalid pattern type."""
     alert_data = {
