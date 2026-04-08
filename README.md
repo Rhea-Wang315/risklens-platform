@@ -290,6 +290,17 @@ curl -X POST http://localhost:8000/api/v1/evaluate \
 # WARNING - ⚠️  HIGH RISK ALERT: 0x742d... - Action: FREEZE
 ```
 
+### Slack Alerting (HIGH/CRITICAL)
+
+The decision consumer can forward high-risk decisions to Slack via webhook.
+
+```bash
+export SLACK_WEBHOOK_URL='https://hooks.slack.com/services/XXX/YYY/ZZZ'
+python -m risklens.streaming.consumer
+```
+
+Runbook: `docs/runbooks/slack_alerts.md`
+
 **Use cases**:
 - Real-time alerting (Slack, PagerDuty)
 - Dashboard updates (Grafana, custom UI)
@@ -311,7 +322,7 @@ curl -X POST http://localhost:8000/api/v1/evaluate \
 - [x] Kafka decision event publishing
 - [ ] Kafka/Redis event streaming (end-to-end consumer + workflows)
 - [ ] Real-time detection pipeline
-- [ ] Alert manager with Slack integration
+- [x] Alert manager with Slack integration (webhook + runbook)
 - [ ] K8s deployment manifests
 ### Phase 3: Operator Dashboard 🚧 (In Progress)
 - [x] Streamlit operator dashboard (MVP)
@@ -453,7 +464,7 @@ Historical planning docs are archived in `docs/archive/`:
 
 **Next Milestones**:
 - Alert management UI hardening (advanced filters + queue prioritization)
-- Slack alert integration + runbooks
+- PagerDuty integration + incident escalation runbooks
 - Rule change governance (versioning + approval/audit workflow)
 
 ---
