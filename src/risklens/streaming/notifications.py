@@ -56,7 +56,9 @@ class SlackNotifier:
                 if attempt < attempts:
                     time.sleep(self.retry_backoff_seconds * attempt)
 
-        logger.error("Slack alert permanently failed for decision_id=%s", decision.get("decision_id"))
+        logger.error(
+            "Slack alert permanently failed for decision_id=%s", decision.get("decision_id")
+        )
         return False
 
     def close(self) -> None:
