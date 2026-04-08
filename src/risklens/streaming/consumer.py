@@ -11,11 +11,13 @@ import json
 import logging
 import signal
 import sys
+from typing import Optional
 
 from kafka import KafkaConsumer
 from kafka.errors import KafkaError
 
 from risklens.config import get_settings
+from risklens.streaming.notifications import SlackNotifier
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -26,11 +28,12 @@ logger = logging.getLogger(__name__)
 class DecisionConsumer:
     """Kafka consumer for decision events."""
 
-    def __init__(self):
+    def __init__(self, notifier: Optional[SlackNotifier] = None):
         """Initialize Kafka consumer."""
         settings = get_settings()
         self.topic = settings.kafka_topic_decisions
         self.running = True
+        self.notifier = notifier or SlackNotifier(webhook_url=settings.slack_webhook_url)
 
         try:
             self.consumer = KafkaConsumer(
@@ -71,15 +74,13 @@ class DecisionConsumer:
             f"risk={risk_level}, action={action}, address={address}"
         )
 
-        # Example: Alert on high-risk decisions
+        # Alert on high-risk decisions
         if risk_level in ["HIGH", "CRITICAL"]:
             logger.warning(
                 f"⚠️  HIGH RISK ALERT: {address} - Action: {action} - "
                 f"Rationale: {decision.get('rationale')}"
             )
-
-            # TODO: Send to Slack/PagerDuty
-            # send_slack_alert(decision)
+            self.notifier.notify_high_risk(decision)
 
         # Example: Log all decisions to external system
         # log_to_external_system(decision)
@@ -109,6 +110,7 @@ class DecisionConsumer:
         """Close consumer connection."""
         logger.info("Closing Kafka consumer...")
         self.consumer.close()
+        self.notifier.close()
 
     def stop(self):
         """Stop consuming (graceful shutdown)."""
