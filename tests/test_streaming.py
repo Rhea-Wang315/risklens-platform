@@ -6,9 +6,9 @@ import httpx
 import pytest
 
 from risklens.models import ActionType, Decision, RiskLevel
+from risklens.streaming import DecisionProducer, get_producer
 from risklens.streaming.consumer import DecisionConsumer
 from risklens.streaming.notifications import SlackNotifier
-from risklens.streaming import DecisionProducer, get_producer
 
 
 @pytest.fixture
