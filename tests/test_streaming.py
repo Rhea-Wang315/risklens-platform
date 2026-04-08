@@ -2,9 +2,12 @@
 
 from unittest.mock import MagicMock, patch
 
+import httpx
 import pytest
 
 from risklens.models import ActionType, Decision, RiskLevel
+from risklens.streaming.consumer import DecisionConsumer
+from risklens.streaming.notifications import SlackNotifier
 from risklens.streaming import DecisionProducer, get_producer
 
 
@@ -103,3 +106,95 @@ def test_get_producer_singleton():
         producer1 = get_producer()
         producer2 = get_producer()
         assert producer1 is producer2
+
+
+def test_slack_notifier_skips_when_webhook_missing():
+    """Slack notifier should no-op when webhook is not configured."""
+    notifier = SlackNotifier(webhook_url=None)
+
+    assert notifier.notify_high_risk({"decision_id": "d1"}) is False
+
+    notifier.close()
+
+
+def test_slack_notifier_success():
+    """Slack notifier should return True on successful post."""
+    mock_client = MagicMock()
+    mock_response = MagicMock()
+    mock_response.raise_for_status.return_value = None
+    mock_client.post.return_value = mock_response
+
+    notifier = SlackNotifier(webhook_url="https://hooks.slack.test/abc", client=mock_client)
+    sent = notifier.notify_high_risk(
+        {
+            "decision_id": "d1",
+            "risk_level": "HIGH",
+            "action": "FREEZE",
+            "address": "0xabc",
+            "confidence": 0.88,
+            "rationale": "wash trading pattern",
+        }
+    )
+
+    assert sent is True
+    mock_client.post.assert_called_once()
+
+
+def test_slack_notifier_retries_then_fails():
+    """Slack notifier should retry and eventually fail on HTTP errors."""
+    mock_client = MagicMock()
+    mock_client.post.side_effect = httpx.ConnectError("network down")
+
+    notifier = SlackNotifier(
+        webhook_url="https://hooks.slack.test/abc",
+        max_retries=2,
+        retry_backoff_seconds=0,
+        client=mock_client,
+    )
+    sent = notifier.notify_high_risk({"decision_id": "d1"})
+
+    assert sent is False
+    assert mock_client.post.call_count == 3
+
+
+def test_decision_consumer_triggers_slack_for_high_risk():
+    """Consumer should trigger notifier for HIGH risk decisions."""
+    mock_notifier = MagicMock()
+
+    with patch("risklens.streaming.consumer.KafkaConsumer") as mock_kafka:
+        mock_kafka.return_value = MagicMock()
+        consumer = DecisionConsumer(notifier=mock_notifier)
+
+    consumer.process_decision(
+        {
+            "decision_id": "d1",
+            "risk_level": "HIGH",
+            "action": "FREEZE",
+            "address": "0xabc",
+            "rationale": "r1",
+        }
+    )
+
+    mock_notifier.notify_high_risk.assert_called_once()
+    consumer.close()
+
+
+def test_decision_consumer_skips_slack_for_low_risk():
+    """Consumer should not trigger notifier for LOW risk decisions."""
+    mock_notifier = MagicMock()
+
+    with patch("risklens.streaming.consumer.KafkaConsumer") as mock_kafka:
+        mock_kafka.return_value = MagicMock()
+        consumer = DecisionConsumer(notifier=mock_notifier)
+
+    consumer.process_decision(
+        {
+            "decision_id": "d1",
+            "risk_level": "LOW",
+            "action": "OBSERVE",
+            "address": "0xabc",
+        }
+    )
+
+    mock_notifier.notify_high_risk.assert_not_called()
+    consumer.close()
