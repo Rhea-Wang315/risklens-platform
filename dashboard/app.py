@@ -129,6 +129,26 @@ def _page_recent_decisions(base_url: str) -> None:
         address = st.text_input("Address", value="")
         risk_level = st.selectbox("Risk Level", options=["", "LOW", "MEDIUM", "HIGH", "CRITICAL"])
         action = st.selectbox("Action", options=["", "OBSERVE", "WARN", "FREEZE", "ESCALATE"])
+        decision_status = st.selectbox(
+            "Decision Status",
+            options=["", "OPEN", "IN_REVIEW", "RESOLVED", "FALSE_POSITIVE"],
+        )
+        triage_assignee = st.text_input("Triage Assignee", value="")
+        risk_score_range = st.slider(
+            "Risk Score Range",
+            min_value=0.0,
+            max_value=100.0,
+            value=(0.0, 100.0),
+            step=1.0,
+        )
+        decided_after = st.text_input("Decided After (ISO UTC)", value="")
+        decided_before = st.text_input("Decided Before (ISO UTC)", value="")
+        sort_by = st.selectbox(
+            "Sort By",
+            options=["decided_at", "triage_updated_at", "risk_score", "priority"],
+            index=0,
+        )
+        sort_order = st.selectbox("Sort Order", options=["desc", "asc"], index=0)
         limit = st.number_input("Limit", min_value=1, max_value=1000, value=100, step=10)
         offset = st.number_input("Offset", min_value=0, value=0, step=10)
         refresh = st.button("Refresh")
@@ -140,6 +160,20 @@ def _page_recent_decisions(base_url: str) -> None:
         params["risk_level"] = risk_level
     if action:
         params["action"] = action
+    if decision_status:
+        params["decision_status"] = decision_status
+    if triage_assignee.strip():
+        params["triage_assignee"] = triage_assignee.strip()
+    if risk_score_range[0] > 0:
+        params["min_risk_score"] = float(risk_score_range[0])
+    if risk_score_range[1] < 100:
+        params["max_risk_score"] = float(risk_score_range[1])
+    if decided_after.strip():
+        params["decided_after"] = decided_after.strip()
+    if decided_before.strip():
+        params["decided_before"] = decided_before.strip()
+    params["sort_by"] = sort_by
+    params["sort_order"] = sort_order
 
     if refresh:
         st.cache_data.clear()
@@ -469,6 +503,23 @@ def _page_triage(base_url: str) -> None:
             options=["", "OPEN", "IN_REVIEW", "RESOLVED", "FALSE_POSITIVE"],
         )
         assignee = st.text_input("Assignee", value="")
+        risk_score_range = st.slider(
+            "Risk Score Range",
+            min_value=0.0,
+            max_value=100.0,
+            value=(0.0, 100.0),
+            step=1.0,
+        )
+        sort_profile = st.selectbox(
+            "Queue Ordering",
+            options=[
+                "priority",
+                "decided_at_desc",
+                "triage_updated_at_desc",
+                "risk_score_desc",
+            ],
+            index=0,
+        )
         limit = st.number_input("Limit", min_value=1, max_value=500, value=50, step=10)
         refresh = st.button("Refresh Triage")
 
@@ -477,6 +528,21 @@ def _page_triage(base_url: str) -> None:
         params["decision_status"] = status
     if assignee.strip():
         params["triage_assignee"] = assignee.strip()
+    if risk_score_range[0] > 0:
+        params["min_risk_score"] = float(risk_score_range[0])
+    if risk_score_range[1] < 100:
+        params["max_risk_score"] = float(risk_score_range[1])
+    if sort_profile == "priority":
+        params["sort_by"] = "priority"
+    elif sort_profile == "decided_at_desc":
+        params["sort_by"] = "decided_at"
+        params["sort_order"] = "desc"
+    elif sort_profile == "triage_updated_at_desc":
+        params["sort_by"] = "triage_updated_at"
+        params["sort_order"] = "desc"
+    else:
+        params["sort_by"] = "risk_score"
+        params["sort_order"] = "desc"
 
     if refresh:
         st.cache_data.clear()
