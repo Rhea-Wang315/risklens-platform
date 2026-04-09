@@ -422,6 +422,212 @@ def test_list_decisions_pagination(test_client: TestClient, db_session: Session)
     assert len(ids1.intersection(ids2)) == 0
 
 
+def test_list_decisions_filter_by_risk_score_range(
+    test_client: TestClient, db_session: Session
+) -> None:
+    """Test filtering decisions by risk score range."""
+    records = [
+        DecisionRecord(
+            decision_id="rs1",
+            alert_id="a1",
+            address="0xscore",
+            risk_level="LOW",
+            action="OBSERVE",
+            confidence=0.6,
+            risk_score=25.0,
+            rationale="r1",
+            evidence_refs=[],
+            recommendations=[],
+            limitations=[],
+            rule_version="v1.0.0",
+            decided_at=datetime(2026, 4, 2, 8, 0, 0),
+            alert_data={},
+        ),
+        DecisionRecord(
+            decision_id="rs2",
+            alert_id="a2",
+            address="0xscore",
+            risk_level="MEDIUM",
+            action="WARN",
+            confidence=0.7,
+            risk_score=55.0,
+            rationale="r2",
+            evidence_refs=[],
+            recommendations=[],
+            limitations=[],
+            rule_version="v1.0.0",
+            decided_at=datetime(2026, 4, 2, 9, 0, 0),
+            alert_data={},
+        ),
+        DecisionRecord(
+            decision_id="rs3",
+            alert_id="a3",
+            address="0xscore",
+            risk_level="HIGH",
+            action="FREEZE",
+            confidence=0.9,
+            risk_score=85.0,
+            rationale="r3",
+            evidence_refs=[],
+            recommendations=[],
+            limitations=[],
+            rule_version="v1.0.0",
+            decided_at=datetime(2026, 4, 2, 10, 0, 0),
+            alert_data={},
+        ),
+    ]
+    for record in records:
+        db_session.add(record)
+    db_session.commit()
+
+    response = test_client.get("/api/v1/decisions?min_risk_score=50&max_risk_score=90")
+    assert response.status_code == 200
+    data = response.json()
+    ids = {row["decision_id"] for row in data}
+    assert ids == {"rs2", "rs3"}
+
+
+def test_list_decisions_filter_by_decided_time_range(
+    test_client: TestClient, db_session: Session
+) -> None:
+    """Test filtering decisions by decided_at time range."""
+    records = [
+        DecisionRecord(
+            decision_id="dt1",
+            alert_id="a1",
+            address="0xtime",
+            risk_level="LOW",
+            action="OBSERVE",
+            confidence=0.6,
+            risk_score=20.0,
+            rationale="r1",
+            evidence_refs=[],
+            recommendations=[],
+            limitations=[],
+            rule_version="v1.0.0",
+            decided_at=datetime(2026, 4, 3, 8, 0, 0),
+            alert_data={},
+        ),
+        DecisionRecord(
+            decision_id="dt2",
+            alert_id="a2",
+            address="0xtime",
+            risk_level="MEDIUM",
+            action="WARN",
+            confidence=0.7,
+            risk_score=50.0,
+            rationale="r2",
+            evidence_refs=[],
+            recommendations=[],
+            limitations=[],
+            rule_version="v1.0.0",
+            decided_at=datetime(2026, 4, 3, 10, 0, 0),
+            alert_data={},
+        ),
+        DecisionRecord(
+            decision_id="dt3",
+            alert_id="a3",
+            address="0xtime",
+            risk_level="HIGH",
+            action="FREEZE",
+            confidence=0.9,
+            risk_score=80.0,
+            rationale="r3",
+            evidence_refs=[],
+            recommendations=[],
+            limitations=[],
+            rule_version="v1.0.0",
+            decided_at=datetime(2026, 4, 3, 12, 0, 0),
+            alert_data={},
+        ),
+    ]
+    for record in records:
+        db_session.add(record)
+    db_session.commit()
+
+    response = test_client.get(
+        "/api/v1/decisions?decided_after=2026-04-03T09:00:00&decided_before=2026-04-03T11:00:00"
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data) == 1
+    assert data[0]["decision_id"] == "dt2"
+
+
+def test_list_decisions_priority_sorting(test_client: TestClient, db_session: Session) -> None:
+    """Priority sorting should prefer open + high-risk + recent triage updates."""
+    records = [
+        DecisionRecord(
+            decision_id="pq1",
+            alert_id="a1",
+            address="0xqueue",
+            risk_level="HIGH",
+            action="FREEZE",
+            confidence=0.9,
+            risk_score=88.0,
+            rationale="r1",
+            evidence_refs=[],
+            recommendations=[],
+            limitations=[],
+            rule_version="v1.0.0",
+            decision_status="OPEN",
+            triage_assignee=None,
+            triage_notes=None,
+            decided_at=datetime(2026, 4, 4, 8, 0, 0),
+            triage_updated_at=datetime(2026, 4, 4, 9, 0, 0),
+            alert_data={},
+        ),
+        DecisionRecord(
+            decision_id="pq2",
+            alert_id="a2",
+            address="0xqueue",
+            risk_level="CRITICAL",
+            action="ESCALATE",
+            confidence=0.95,
+            risk_score=95.0,
+            rationale="r2",
+            evidence_refs=[],
+            recommendations=[],
+            limitations=[],
+            rule_version="v1.0.0",
+            decision_status="RESOLVED",
+            triage_assignee="alice",
+            triage_notes="closed",
+            decided_at=datetime(2026, 4, 4, 10, 0, 0),
+            triage_updated_at=datetime(2026, 4, 4, 11, 0, 0),
+            alert_data={},
+        ),
+        DecisionRecord(
+            decision_id="pq3",
+            alert_id="a3",
+            address="0xqueue",
+            risk_level="MEDIUM",
+            action="WARN",
+            confidence=0.7,
+            risk_score=55.0,
+            rationale="r3",
+            evidence_refs=[],
+            recommendations=[],
+            limitations=[],
+            rule_version="v1.0.0",
+            decision_status="IN_REVIEW",
+            triage_assignee="bob",
+            triage_notes="working",
+            decided_at=datetime(2026, 4, 4, 12, 0, 0),
+            triage_updated_at=datetime(2026, 4, 4, 12, 30, 0),
+            alert_data={},
+        ),
+    ]
+    for record in records:
+        db_session.add(record)
+    db_session.commit()
+
+    response = test_client.get("/api/v1/decisions?sort_by=priority")
+    assert response.status_code == 200
+    ordered_ids = [row["decision_id"] for row in response.json()]
+    assert ordered_ids[:3] == ["pq1", "pq3", "pq2"]
+
+
 def test_update_decision_triage_success(test_client: TestClient) -> None:
     """Test triage updates for an existing decision."""
     create_response = test_client.post(

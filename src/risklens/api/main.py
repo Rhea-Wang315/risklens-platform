@@ -16,11 +16,12 @@ Design Philosophy:
 import time
 from collections import Counter
 from datetime import datetime
-from typing import Optional
+from typing import Literal, Optional
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Response
 from fastapi.responses import JSONResponse
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
+from sqlalchemy import case
 from sqlalchemy.orm import Session
 
 from risklens.db.models import DecisionRecord
@@ -226,6 +227,18 @@ async def list_decisions(
         None, description="Filter by triage status (OPEN/IN_REVIEW/RESOLVED/FALSE_POSITIVE)"
     ),
     triage_assignee: Optional[str] = Query(None, description="Filter by triage assignee"),
+    min_risk_score: Optional[float] = Query(None, ge=0, le=100, description="Minimum risk score"),
+    max_risk_score: Optional[float] = Query(None, ge=0, le=100, description="Maximum risk score"),
+    decided_after: Optional[datetime] = Query(
+        None, description="Filter decisions made at/after this UTC timestamp (ISO-8601)"
+    ),
+    decided_before: Optional[datetime] = Query(
+        None, description="Filter decisions made at/before this UTC timestamp (ISO-8601)"
+    ),
+    sort_by: Literal["decided_at", "triage_updated_at", "risk_score", "priority"] = Query(
+        "decided_at", description="Sort key for decision list"
+    ),
+    sort_order: Literal["asc", "desc"] = Query("desc", description="Sort direction"),
     limit: int = Query(100, ge=1, le=1000, description="Maximum number of results"),
     offset: int = Query(0, ge=0, description="Number of results to skip"),
     db: Session = Depends(get_db),
@@ -256,9 +269,46 @@ async def list_decisions(
         query = query.filter(DecisionRecord.decision_status == decision_status.upper())
     if triage_assignee:
         query = query.filter(DecisionRecord.triage_assignee == triage_assignee)
+    if min_risk_score is not None:
+        query = query.filter(DecisionRecord.risk_score >= min_risk_score)
+    if max_risk_score is not None:
+        query = query.filter(DecisionRecord.risk_score <= max_risk_score)
+    if decided_after:
+        query = query.filter(DecisionRecord.decided_at >= decided_after)
+    if decided_before:
+        query = query.filter(DecisionRecord.decided_at <= decided_before)
 
-    # Order by decided_at descending (most recent first)
-    query = query.order_by(DecisionRecord.decided_at.desc())
+    if sort_by == "priority":
+        status_priority = case(
+            (DecisionRecord.decision_status == "OPEN", 3),
+            (DecisionRecord.decision_status == "IN_REVIEW", 2),
+            (DecisionRecord.decision_status == "RESOLVED", 1),
+            (DecisionRecord.decision_status == "FALSE_POSITIVE", 0),
+            else_=0,
+        )
+        risk_priority = case(
+            (DecisionRecord.risk_level == "CRITICAL", 4),
+            (DecisionRecord.risk_level == "HIGH", 3),
+            (DecisionRecord.risk_level == "MEDIUM", 2),
+            (DecisionRecord.risk_level == "LOW", 1),
+            else_=0,
+        )
+        query = query.order_by(
+            status_priority.desc(),
+            risk_priority.desc(),
+            DecisionRecord.triage_updated_at.desc(),
+            DecisionRecord.decided_at.desc(),
+        )
+    else:
+        sort_columns = {
+            "decided_at": DecisionRecord.decided_at,
+            "triage_updated_at": DecisionRecord.triage_updated_at,
+            "risk_score": DecisionRecord.risk_score,
+        }
+        selected_column = sort_columns[sort_by]
+        query = query.order_by(
+            selected_column.asc() if sort_order == "asc" else selected_column.desc()
+        )
 
     # Apply pagination
     records = query.offset(offset).limit(limit).all()

@@ -328,7 +328,7 @@ Runbook: `docs/runbooks/slack_alerts.md`
 - [x] Streamlit operator dashboard (MVP)
 - [x] Alert triage workflow (status/assignee/notes update)
 - [x] Batch triage operations
-- [ ] Alert management UI (advanced filters, bulk actions)
+- [x] Alert management UI (advanced filters, queue prioritization, bulk actions)
 - [x] Address profiling (API + dashboard page)
 - [x] Rule management interface (via API + dashboard)
 - [x] Metrics dashboard (Prometheus + Grafana)
@@ -463,9 +463,9 @@ Historical planning docs are archived in `docs/archive/`:
 - `docs/archive/ROADMAP.md`
 
 **Next Milestones**:
-- Alert management UI hardening (advanced filters + queue prioritization)
 - PagerDuty integration + incident escalation runbooks
 - Rule change governance (versioning + approval/audit workflow)
+- Alert SLA metrics and queue aging dashboards
 
 ---
 
