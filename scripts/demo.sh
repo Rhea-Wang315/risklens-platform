@@ -9,6 +9,7 @@ mkdir -p "${DEMO_DIR}"
 rm -f "${PIDS_FILE}" >/dev/null 2>&1 || true
 
 export DATABASE_URL="postgresql://risklens:risklens_dev_password@localhost:5433/risklens"
+export POSTGRES_PORT="5433"
 
 cleanup() {
   "${ROOT_DIR}/scripts/demo_stop.sh" >/dev/null 2>&1 || true
@@ -21,7 +22,7 @@ if curl -sf http://127.0.0.1:8000/health >/dev/null 2>&1; then
   exit 1
 fi
 
-docker-compose -f "${ROOT_DIR}/docker-compose.yml" -f "${ROOT_DIR}/docker-compose.dev.yml" up -d
+docker-compose -f "${ROOT_DIR}/docker-compose.yml" up -d
 
 risklens db init
 

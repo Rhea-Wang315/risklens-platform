@@ -14,6 +14,6 @@ if [ -f "${PIDS_FILE}" ]; then
 fi
 
 docker-compose -f "${ROOT_DIR}/docker-compose.observability.yml" down >/dev/null 2>&1 || true
-docker-compose -f "${ROOT_DIR}/docker-compose.yml" -f "${ROOT_DIR}/docker-compose.dev.yml" down >/dev/null 2>&1 || true
+POSTGRES_PORT="${POSTGRES_PORT:-5433}" docker-compose -f "${ROOT_DIR}/docker-compose.yml" down >/dev/null 2>&1 || true
 
 echo "Stopped demo processes and docker-compose stacks."

@@ -127,7 +127,7 @@ pip install -e ".[dev]"
 
 # 4. Set up environment
 cp .env.example .env
-# Note: Default DATABASE_URL uses port 5432 (matches docker-compose.yml)
+# Note: Default DATABASE_URL and POSTGRES_PORT use 5432
 
 # 5. Initialize database
 risklens db init
@@ -168,7 +168,7 @@ Generated artifacts:
 - `analysis/output/impact_summary.md`
 - `analysis/output/incident_report_draft.md`
 
-If your machine already has something bound to port 5432 (common on macOS with a system-wide PostgreSQL install), either stop it or change the Postgres port mapping.
+If your machine already has something bound to port 5432 (common on macOS with a system-wide PostgreSQL install), either stop it or switch both `POSTGRES_PORT` and `DATABASE_URL` to 5433.
 
 To stop an EnterpriseDB PostgreSQL 15 service (if you have it installed):
 
@@ -176,11 +176,12 @@ To stop an EnterpriseDB PostgreSQL 15 service (if you have it installed):
 sudo /Library/PostgreSQL/15/bin/pg_ctl -D /Library/PostgreSQL/15/data stop -m fast
 ```
 
-Or use the provided dev override to run Postgres on 5433:
+Or run Docker Postgres on 5433 without editing `docker-compose.yml`:
 
 ```bash
-docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+export POSTGRES_PORT=5433
 export DATABASE_URL=postgresql://risklens:risklens_dev_password@localhost:5433/risklens
+docker-compose up -d
 ```
 
 The API will be available at `http://localhost:8000`. Check health: `curl http://localhost:8000/health`
