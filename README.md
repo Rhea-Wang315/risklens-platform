@@ -142,6 +142,18 @@ For a fully-scripted local demo (DB + migrations + API + dashboard + observabili
 ./scripts/demo.sh
 ```
 
+For a fast local smoke workflow (DB + migrations + API + one evaluation check):
+
+```bash
+./scripts/local_smoke.sh
+```
+
+To stop everything started by the smoke workflow:
+
+```bash
+./scripts/local_smoke_stop.sh
+```
+
 To stop everything started by the demo:
 
 ```bash
@@ -187,6 +199,36 @@ docker-compose up -d
 The API will be available at `http://localhost:8000`. Check health: `curl http://localhost:8000/health`
 
 Prometheus metrics are exposed at `http://localhost:8000/metrics`.
+
+### Local Smoke Workflow
+
+Use this when you want a quick, repeatable verification that the local backend stack works before demoing or developing further.
+
+What it does:
+- starts PostgreSQL, Redis, Zookeeper, and Kafka via Docker Compose
+- runs `risklens db init`
+- starts the API on `127.0.0.1:8000`
+- verifies `/health` and `/metrics`
+- submits `examples/example_alert.json` to `/api/v1/evaluate`
+- leaves the stack running so you can inspect it after the smoke check
+
+Default local smoke ports:
+- PostgreSQL host port: `5433`
+- API: `8000`
+
+If you want a different Postgres host port, override before running:
+
+```bash
+export POSTGRES_PORT=5440
+export DATABASE_URL=postgresql://risklens:risklens_dev_password@localhost:5440/risklens
+./scripts/local_smoke.sh
+```
+
+When you're done inspecting the local stack:
+
+```bash
+./scripts/local_smoke_stop.sh
+```
 
 ### Streamlit Operator Dashboard (MVP)
 
